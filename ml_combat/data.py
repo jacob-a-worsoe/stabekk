@@ -100,6 +100,11 @@ def get_training():
     return ret
 
 
+def get_training_groupby_mean():
+    return get_training().groupby(level = [0,2], axis = 1).mean()[['y', 'estimated', 'observed']]
+
+
+
 def get_testing():
     """ gets the feature estimates used for the forecast """
 
