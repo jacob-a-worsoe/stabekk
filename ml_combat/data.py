@@ -97,6 +97,8 @@ def get_training():
 
     ret = pd.merge(out_temp, ret, left_index=True, right_index=True, how='outer')
 
+    return ret
+
 
 def get_testing():
     """ gets the feature estimates used for the forecast """
