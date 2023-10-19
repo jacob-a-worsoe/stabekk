@@ -6,6 +6,7 @@ Contains the following functions:
 """
 
 import pandas as pd
+import numpy as np
 
 from . import module_dir
 
@@ -104,6 +105,25 @@ def get_training_groupby_mean():
     return get_training().groupby(level = [0,2], axis = 1).mean()[['y', 'estimated', 'observed']]
 
 
+def get_training_flattened():
+    df = get_training_groupby_mean()
+
+    df['estimated', 'weather_data_type'] = np.nan
+
+    df['estimated', 'weather_data_type'] = np.where(df['observed', 'absolute_humidity_2m:gm3'].notna(),'observed', df['estimated', 'weather_data_type'])
+    df['estimated', 'weather_data_type'] = np.where(df['estimated', 'absolute_humidity_2m:gm3'].notna(),'estimated', df['estimated', 'weather_data_type'])
+    df.estimated = df.estimated.fillna(df.observed)
+
+    df = df.drop(columns=['observed'], level=0)
+    df.columns = df.columns.droplevel().tolist()
+    df.reset_index(inplace=True)
+    df.rename(columns={'datetime': 'ds', 'pv_measurement': 'y'}, inplace=True)
+    df['ENG_total_rad'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
+    
+    return df[['location', 'ds', 'y', 'weather_data_type', 'ENG_total_rad'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]].copy()
+
+
+### Testing
 
 def get_testing():
     """ gets the feature estimates used for the forecast """
