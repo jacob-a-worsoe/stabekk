@@ -14,7 +14,7 @@ class MetaModel(ABC):
         return
 
     # Denne df-en må ha y som kolonne
-    def test(self, df: pd.DataFrame):
+    def test(self, df: pd.DataFrame, n_splits=5):
         """
             Expanding window cross-validation, df must have y in it for testing against predictions
         """
@@ -26,7 +26,9 @@ class MetaModel(ABC):
 
         df_cleaned = self.preprocess(df)
 
-        tscv = TimeSeriesSplit(n_splits=5)
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+
+        MAE_values = []
 
         for train_index, test_index in tscv.split(df_cleaned):
             train_partition = df_cleaned.iloc[train_index]
@@ -39,10 +41,11 @@ class MetaModel(ABC):
             y_pred = predictions['y_pred']
 
             MAE = mean_absolute_error(y_true, y_pred)
+            MAE_values.append(MAE)
 
             print(f'Train-Test ratio:{len(train_partition)/len(valid_partition)} achieved MAE {MAE}')
 
-        pass
+        return MAE_values
     
     @abstractmethod
     def preprocess(df: pd.DataFrame) -> pd.DataFrame:
