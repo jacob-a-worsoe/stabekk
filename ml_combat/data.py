@@ -118,9 +118,9 @@ def get_training_flattened():
     df.columns = df.columns.droplevel().tolist()
     df.reset_index(inplace=True)
     df.rename(columns={'datetime': 'ds', 'pv_measurement': 'y'}, inplace=True)
-    df['ENG_total_rad'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
+    # df['ENG_total_rad'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
     
-    return df[['location', 'ds', 'y', 'weather_data_type', 'ENG_total_rad'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]].copy()
+    return df[['location', 'ds', 'y', 'weather_data_type'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]].copy()
 
 
 ### Testing
@@ -156,3 +156,13 @@ def get_testing():
         ret = pd.concat([ret, out_temp])
 
     return ret
+
+
+def get_testing_flattened():
+    df = get_testing()
+    df = df.groupby(level = [0,2], axis = 1).mean()[['estimated']]
+    df.columns = df.columns.droplevel().tolist()
+    df.reset_index(inplace=True)
+    df.rename(columns={'datetime': 'ds'}, inplace=True)
+    df['weather_data_type'] = 'estimated'
+    return df[['location', 'ds', 'weather_data_type'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]]
