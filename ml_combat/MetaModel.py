@@ -1,19 +1,47 @@
 
 import pandas as pd
 from abc import ABC, abstractmethod
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import mean_absolute_error
+import numpy as np
 
 class MetaModel(ABC):     
     def __init__(self, model_name):
         self.model_name = model_name
-        self.model: object = None
-        self.params: dict = dict()
+        self.model = None
+
         return
 
+    # Denne df-en må ha y som kolonne
+    def test(self, df: pd.DataFrame):
+        """
+            Expanding window cross-validation, df must have y in it for testing against predictions
+        """
 
-    def test(self, df):
-        # TODO: IMPLEMENT
+        print(f"Testing {self.model_name}")
+        column_names = df.columns.tolist()
+        if 'y' not in column_names:
+            raise Exception(f"Missing observed y in columns. Available are {column_names}")
+
         df_cleaned = self.preprocess(df)
-        y_pred = self.predict(df) #NOE SLIKT etc
+
+        tscv = TimeSeriesSplit(n_splits=5)
+
+        for train_index, test_index in tscv.split(df_cleaned):
+            train_partition = df_cleaned.iloc[train_index]
+            valid_partition = df_cleaned.iloc[test_index]
+
+            self.train(train_partition)
+            predictions = self.predict(valid_partition)
+            
+            y_true = valid_partition['y']
+            y_pred = predictions['y_pred']
+
+            MAE = mean_absolute_error(y_true, y_pred)
+
+            print(f'Train-Test ratio:{len(train_partition)/len(valid_partition)} achieved MAE {MAE}')
+
         pass
     
     @abstractmethod
@@ -33,34 +61,6 @@ class MetaModel(ABC):
     @abstractmethod
     def predict(df: pd.DataFrame):
         """
-            Runs trained model on on input df, preprocessing the df first and then 
+            Runs trained model on on input df, preprocessing the df first and then returns datetime and y_pred
         """
         pass
-
-
-class LinearRegressionModel(MetaModel):
-    
-    def __init__(self):
-        super().__init__("Linear Regression")
-        
-
-    def preprocess(df):
-        """
-        """
-        pass
-
-    def train(df):
-        """
-        """
-        pass
-
-    def predict(df):
-        """
-        """
-        pass
-
-
-print("Attempting to create a linear regression model")
-lr = LinearRegressionModel()
-lr.train()
-print("Done creating a linear regression model!")
