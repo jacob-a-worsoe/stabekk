@@ -24,15 +24,16 @@ class MetaModel(ABC):
         if 'y' not in column_names:
             raise Exception(f"Missing observed y in columns. Available are {column_names}")
 
-        df_cleaned = self.preprocess(df)
+        # This is unecessary because we already clean it when calling train
+        #df_cleaned = self.preprocess(df)
 
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
         MAE_values = []
 
-        for train_index, test_index in tscv.split(df_cleaned):
-            train_partition = df_cleaned.iloc[train_index]
-            valid_partition = df_cleaned.iloc[test_index]
+        for train_index, test_index in tscv.split(df):
+            train_partition = df.iloc[train_index]
+            valid_partition = df.iloc[test_index]
 
             self.train(train_partition)
             predictions = self.predict(valid_partition)
