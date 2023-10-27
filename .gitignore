@@ -1,6 +1,7 @@
 # added by jacobworsoe
 .DS_Store
 /.vscode
+/archive
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
