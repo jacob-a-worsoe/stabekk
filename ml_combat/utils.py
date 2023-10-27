@@ -36,7 +36,7 @@ def map_hour_to_seasonal(df, time_col):
 # liste med 'y_pred' 
 
 def y_pred_to_csv(df, file_name):
-    df[['y_pred']].reset_index(drop=True).reset_index().rename(columns={'index': 'id', 'y_pred': 'prediction'}).to_csv(name, index=False)
+    df[['y_pred']].reset_index(drop=True).reset_index().rename(columns={'index': 'id', 'y_pred': 'prediction'}).to_csv(file_name, index=False)
 
 # def temp():
 #     df = ml.data.get_training_flattened()
