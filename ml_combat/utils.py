@@ -2,7 +2,7 @@
 import pandas as pd
 
 from . import module_dir
-
+from . import data
 
 def interpolate_na(df: pd.DataFrame, cols: list, inplace=True):
     if inplace:
@@ -35,29 +35,36 @@ def map_hour_to_seasonal(df, time_col):
 
 # liste med 'y_pred' 
 
-def y_pred_to_csv(df, file_name):
-    df[['y_pred']].reset_index(drop=True).reset_index().rename(columns={'index': 'id', 'y_pred': 'prediction'}).to_csv(file_name, index=False)
+def y_pred_to_csv(file_name, df):
+    df[['y_pred']].reset_index(drop=True).reset_index().rename(columns={'index': 'id', 'y_pred': 'prediction'}).to_csv(module_dir + "/../submissions/" + file_name, index=False)
 
-# def temp():
-#     df = ml.data.get_training_flattened()
-#     test = ml.data.get_testing_flattened()
-#     ret = pd.DataFrame()
-#     for location in ['A', 'B', 'C']:
-#         temp_df = df[df['location']==location]
+def make_submittable(file_name, model = None, model_dict = None):
+    """
+    model if same model used for all locations
+    model dict if not
 
-#         if location != "A":
-#             temp_df = temp_df[df.weather_data_type == 'observed']
+    model is instance of model (model = MetaModel())
+    model dict uses location as key ({"A": MetaModel(), "B": MetaModel(), "C": MetaModel()})
+    """
 
-#         lr = ProphetModel()
-#         print("----------------- RESULT HERE", np.mean(lr.test(temp_df)))
+    df = data.get_training_flattened()
+    test = data.get_testing_flattened()
+    ret = pd.DataFrame()
+    
+    for location in ['A', 'B', 'C']:
+        temp_df = df[df['location']==location]
+        temp_test = test[test['location']==location]
 
-#         lr.train(temp_df)
-#         ret = pd.concat([ret, lr.predict(test[test['location']==location])])
+        if model is not None:
+            m = model
+        elif model_dict is not None:
+            m = model_dict[location]
+        else:
+            raise ValueError("no model specified")
+    
+        m.train(temp_df)
+        fcst = m.predict(temp_test)
 
-#     print("Done creating a linear regression model!")
+        ret = pd.concat([ret, fcst])
 
-#     ret = ret.reset_index(drop=True).reset_index().drop(columns=["ds"]).rename(columns={'index': 'id', 'y_pred': 'prediction'})
-#     ret.prediction = ret.prediction.apply(lambda a : max(a, 0))
-#     ret
-
-#     ret.to_csv("prophet_tweaked.csv", index=False)
+    y_pred_to_csv(file_name, ret)
