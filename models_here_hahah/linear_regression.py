@@ -1,4 +1,10 @@
 
+import warnings
+
+# Temporarily suppress FutureWarning
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=FutureWarning)
+
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import numpy as np
@@ -30,10 +36,13 @@ class LinearRegressionModel(MetaModel):
 
         temp_df['total_rad_1h:J'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
 
-        temp_df = temp_df.dropna(axis=0, how="all", subset="total_rad_1h:J")
+        temp_df['total_rad_1h:J'].ffill(inplace=True)
+        temp_df['total_rad_1h:J'].bfill(inplace=True)
+
+        temp_df['total_rad_1h:J'].fillna(temp_df['total_rad_1h:J'].interpolate().cummax(), inplace=True)
 
         if('y' in temp_df.columns.tolist()):
-            temp_df = temp_df.dropna(axis=0, how="all", subset="y")
+            temp_df['y'].fillna(df['y'].interpolate().cummax(), inplace=True)
 
         return temp_df
 
@@ -47,20 +56,21 @@ class LinearRegressionModel(MetaModel):
 
 
     def predict(self, df):
-        """
-        """
         df = self.preprocess(df)
 
         y_preds = self.model.predict(df['total_rad_1h:J'].values.reshape(-1, 1))
         y_preds_arr = np.array(y_preds)
 
         out_df = pd.DataFrame(y_preds_arr, columns=["y_pred"])        
+
         return out_df
     
 
+
 df = ml.data.get_training_flattened()
+
 for location in ['A', 'B', 'C']:
-    temp_df = df[df['location']==location]
+    temp_df = df[df['location'] == location]
 
     lr = LinearRegressionModel()
     lr.test(temp_df)

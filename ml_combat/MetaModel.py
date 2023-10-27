@@ -18,14 +18,14 @@ class MetaModel(ABC):
         """
             Expanding window cross-validation, df must have y in it for testing against predictions
         """
-
         print(f"Testing {self.model_name}")
         column_names = df.columns.tolist()
         if 'y' not in column_names:
             raise Exception(f"Missing observed y in columns. Available are {column_names}")
 
         # This is unecessary because we already clean it when calling train
-        #df_cleaned = self.preprocess(df)
+        # drop_y_with_na
+        df = df.dropna(subset=['y'], inplace=False)
 
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
@@ -44,8 +44,10 @@ class MetaModel(ABC):
             MAE = mean_absolute_error(y_true, y_pred)
             MAE_values.append(MAE)
 
-            print(f'Train-Test ratio:{len(train_partition)/len(valid_partition)} achieved MAE {MAE}')
+            #print(f'Train-Test ratio:{len(train_partition)/len(valid_partition)} achieved MAE {MAE}')
 
+        print("MAE Vals", MAE_values)
+        
         return MAE_values
     
     @abstractmethod

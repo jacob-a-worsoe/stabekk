@@ -45,11 +45,10 @@ class LSTM(MetaModel):
         ]
 
         self.window_len = window_len
-        self.batch_size = 10
+        self.batch_size = 1
         self.num_features = None
         self.epochs = 1
         self.scaler = None
-        self.num_features_history = []
     
     def test(self, df, n_splits=5):
         print(f"Testing {self.model_name}")
@@ -111,10 +110,6 @@ class LSTM(MetaModel):
         if(has_target_col):
             self.num_features = temp_np.shape[1] - 1
 
-            ## TEMPORARY ##
-            self.num_features_history.append(self.num_features)
-            ###############
-
             features = temp_np[:, : self.num_features]
             targets = temp_np[:, self.num_features]
 
@@ -122,10 +117,6 @@ class LSTM(MetaModel):
         
         else:
             self.num_features = temp_np.shape[1]
-            
-            ## TEMPORARY ##
-            self.num_features_history.append(self.num_features)
-            ###############
 
             features = temp_np[:, : self.num_features]
             dummy_targets = np.zeros(features.shape)
@@ -141,7 +132,6 @@ class LSTM(MetaModel):
         # test_df = df.iloc[train_end:]
 
         train_generator = self.preprocess(df, has_target_col = True)
-        print("20*12")
         # test_generator = self.preprocess(test_df, has_target_col=True)
 
         # Design the model
