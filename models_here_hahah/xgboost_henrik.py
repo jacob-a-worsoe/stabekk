@@ -35,13 +35,26 @@ class XGBoostHenrik(MetaModel):
         super().__init__("XGBoost Henrik")
         self.features = []
         
-    def preprocess(self, df: pd.DataFrame):
+        self.features.extend(['month',
+                             'hour',
+                            'total_rad_1h:J',
+        'absolute_humidity_2m:gm3',
+       'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+       'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+       'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
+       'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+       'fresh_snow_3h:cm', 'fresh_snow_6h:cm',
+       'is_in_shadow:idx', 'msl_pressure:hPa', 'precip_5min:mm',
+       'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
+       'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+       'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
+       'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2',
+       'sun_azimuth:d', 'sun_elevation:d', 'super_cooled_liquid_water:kgm2',
+       't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+       'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
+       'wind_speed_w_1000hPa:ms'])
+        
         """
-        """
-        temp_df = df.copy()
-
-        has_target = 'y' in temp_df.columns
-
         self.features.extend(['month',
                              'hour',
                             'total_rad_1h:J',
@@ -57,27 +70,46 @@ class XGBoostHenrik(MetaModel):
                             'air_density_2m:kgm3',
                             'absolute_humidity_2m:gm3'])
         
-        # TEMP
-        #self.features = ['total_rad_1h:J', 'y']
-            
+        self.features.extend(['super_cooled_liquid_water:kgm2',
+                              'effective_cloud_cover:p', 'elevation:m',
+                              'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+                              'msl_pressure:hPa', 'precip_5min:mm', 'prob_rime:p', 
+                              'relative_humidity_1000hPa:p', 'visibility:m'
+                              ])
+        """                              
+        
+    def preprocess(self, df: pd.DataFrame):
+        """
+        """
+        temp_df = df.copy()
+
+        has_target = 'y' in temp_df.columns        
+        
+        ##################################################################################### 
         # FEATURE ENGINEERING
+        #####################################################################################
 
         temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
-        temp_df['hour'] = temp_df['ds'].dt.hour
-        temp_df['month'] = temp_df['ds'].dt.month
-
         
+        # Extracting hour-of-day and month, and making them cyclical
+        temp_df['hour'] = temp_df['ds'].dt.hour
+        ml.utils.map_hour_to_seasonal(temp_df, 'hour')
+
+        temp_df['month'] = temp_df['ds'].dt.month
+        ml.utils.map_month_to_seasonal(temp_df, 'month')
+   
         # SETTING NAN TO 0 CONFORMING TO XGBOOST
         temp_df.fillna(0, inplace=True)
+
+        #####################################################################################
 
         # DROPPING UNEEEDED FEATURES
         if(has_target):
             features_w_y = self.features + ['y']
-            print("FEATUERES WITH Y", features_w_y)
-            temp_df = temp_df[features_w_y].copy()
+            temp_df = temp_df[features_w_y]
 
         else:
-            temp_df = temp_df[self.features].copy()
+            temp_df = temp_df[self.features]
 
         return temp_df
 
@@ -88,24 +120,29 @@ class XGBoostHenrik(MetaModel):
         temp_df = self.preprocess(df)
 
         # Separate features and target
-        features = temp_df.drop('y', axis=1, inplace=False).copy()
-        target = temp_df['y'].copy()
+        X = temp_df.drop('y', axis=1, inplace=False).copy().values
+        y = temp_df['y'].copy().values
 
         # Train test split
-        X_train, X_test, y_train, y_test = train_test_split(features, target, train_size=0.7)
+        #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
+
+        params = {
+            'objective': "reg:absoluteerror",
+            'eta': 0.25,
+            'max_depth': 7
+        }
+
 
         # Setup XGB
-        self.model = xgb.XGBRegressor(
-            objective='reg:squarederror',
-            eval_metric='mae'
-        )
+        self.model = xgb.XGBRegressor(**params)
 
         self.model.fit(
-            X_train,
-            y_train,
+            X,
+            y,
             verbose=True,
-            eval_set=[(X_test, y_test)]
         )
+
+        xgb.plot_importance(self.model)
 
 
 
@@ -114,13 +151,14 @@ class XGBoostHenrik(MetaModel):
         """
         df = self.preprocess(df)
 
-        if('y' in df.columns):
-            df = df.drop('y', axis=1, inplace=False)
+        features = [col for col in df.columns if col != 'y']
+        X = df[features].values
+        y_preds = self.model.predict(X)
 
-        features = df[self.features].copy()
+        # Set all negative predictions to 0
+        y_preds = np.maximum(y_preds, 0)
 
-        out_df = self.model.predict(features)
-
+        out_df = pd.DataFrame(data={'y_pred': y_preds})
 
         return out_df
     
@@ -128,16 +166,46 @@ class XGBoostHenrik(MetaModel):
 
 df = ml.data.get_training_flattened()
 
-
-y_pred = {}
-
 for location in ['A', 'B', 'C']:
-
+    print("###########################################")
+    print(f"###############  LOCATION {location} ###############")
+    print("###########################################")
     df_location = df[df['location'] == location]
 
     xgbh = XGBoostHenrik()
-    xgbh.train(df)
-    y_pred[location] = xgbh.predict(df_location)
+    xgbh.test(df_location)
 
-print(y_pred)
+
+
+# Generate submittable
+ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
+
     
+"""
+Best so far; 
+- all features
+
+
+params = {
+    'objective': "reg:absoluteerror",
+    'eta': 0.25,
+    'max_depth': 7 (greater than this increased error for all locations)
+}
+
+###########################################
+###############  LOCATION A ###############
+###########################################
+Testing XGBoost Henrik
+MAE Vals [354.4295288609099, 153.00990366393563, 212.35652953343995, 237.27280511309309, 128.45569111321652]
+###########################################
+###############  LOCATION B ###############
+###########################################
+Testing XGBoost Henrik
+MAE Vals [20.153800356330613, 81.41714111058613, 53.564878963885704, 40.62891133141144, 35.741791660790895]
+###########################################
+###############  LOCATION C ###############
+###########################################
+Testing XGBoost Henrik
+MAE Vals [88.86359290444013, 12.891829464296443, 47.035847995773594, 7.747385192897654, 24.51771199369076]
+
+"""

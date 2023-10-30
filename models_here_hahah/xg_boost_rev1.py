@@ -22,8 +22,15 @@ class XGBoostModel(MetaModel):
 
     def preprocess(self, df):
         temp_df = df.copy()
-        temp_df['location'] = pd.factorize(temp_df['location'])[0]
 
+        # SETTING ALL NAN TO 0 CONFORMING TO XGBOOST
+        temp_df.fillna(0, inplace=True)
+
+        print("NUM NANS AFTER FILLNA:", temp_df.isna().sum())
+
+
+        temp_df['location'] = pd.factorize(temp_df['location'])[0]
+        
         if 'diffuse_rad_1h:J' in df.columns and 'direct_rad_1h:J' in df.columns:
             temp_df['total_rad_1h:J'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
 
@@ -51,6 +58,7 @@ class XGBoostModel(MetaModel):
 
         if 'y' in df.columns:
             selected_cols.append('y')
+
 
         return temp_df[selected_cols]
 

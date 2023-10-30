@@ -25,13 +25,18 @@ def interpolate_na(df: pd.DataFrame, cols: list, inplace=True):
         return new_df
 
 
-def map_hour_to_seasonal(df, time_col):
+def map_hour_to_seasonal(df, hour_col):
     mapping = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6,
                7: 7, 8: 8, 9: 9, 10: 10, 11: 11, 12: 12,
                13: 11, 14: 10, 15: 9, 16: 8, 17: 7, 18: 6,
                19: 5, 20: 4, 21: 3, 22: 2, 23: 1, 24: 0,}
-    df[time_col] = df[time_col].replace(mapping, inplace=True)
+    df[hour_col].replace(mapping, inplace=True)
 
+def map_month_to_seasonal(df, month_col):
+    mapping = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6,
+               7: 5, 8: 4, 9: 3, 10: 2, 11: 1, 12: 0}
+    
+    df[month_col].replace(mapping, inplace=True)
 
 # liste med 'y_pred' 
 
