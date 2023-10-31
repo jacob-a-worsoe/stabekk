@@ -25,14 +25,14 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-import xgboost as xgb
+import lightgbm as lgbm
 from sklearn.model_selection import train_test_split
 
 
-class XGBoostHenrik(MetaModel):
+class LightBGMHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("XGBoost Henrik")
+        super().__init__("LightBGM Henrik")
         self.features = []
         
         self.features.extend(['month',
@@ -56,6 +56,10 @@ class XGBoostHenrik(MetaModel):
         
         """
 
+        self.features.extend(['total_rad_1h:J', 'month', 'hour', 'sun_elevation:d', 'effective_cloud_cover:p'])
+        """
+
+        """
         self.features.extend(['month',
                              'hour',
                             'total_rad_1h:J',
@@ -70,8 +74,8 @@ class XGBoostHenrik(MetaModel):
                             'dew_or_rime:idx',
                             'air_density_2m:kgm3',
                             'absolute_humidity_2m:gm3'])
-        
-
+        """
+        """
         self.features.extend(['super_cooled_liquid_water:kgm2',
                               'effective_cloud_cover:p', 'elevation:m',
                               'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
@@ -129,19 +133,17 @@ class XGBoostHenrik(MetaModel):
         #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
 
         params = {
-            'objective': "reg:absoluteerror",
-            'eta': 0.25,
-            'max_depth': 7
+            'objective': "mae",
+            'learning_rate': 0.1,
         }
 
 
         # Setup XGB
-        self.model = xgb.XGBRegressor(**params)
+        self.model = lgbm.LGBMRegressor(**params)
 
         self.model.fit(
             X,
-            y,
-            verbose=True,
+            y
         )
 
 
@@ -172,40 +174,33 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    xgbh = XGBoostHenrik()
-    xgbh.test(df_location)
+    lgbmh = LightBGMHenrik()
+    lgbmh.test(df_location)
 
 
 
 # Generate submittable
-ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
+ml.utils.make_submittable("LightBGM.csv", model=LightBGMHenrik())
 """
     
 """
 Best so far; 
 - all features
 
-
-params = {
-    'objective': "reg:absoluteerror",
-    'eta': 0.25,
-    'max_depth': 7 (greater than this increased error for all locations)
-}
-
 ###########################################
 ###############  LOCATION A ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [354.4295288609099, 153.00990366393563, 212.35652953343995, 237.27280511309309, 128.45569111321652]
+Testing LightBGM Henrik
+MAE Vals [311.3878765166861, 144.8697538446572, 204.35073908655116, 232.4819381008638, 124.73181941357622]
 ###########################################
 ###############  LOCATION B ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [20.153800356330613, 81.41714111058613, 53.564878963885704, 40.62891133141144, 35.741791660790895]
+Testing LightBGM Henrik
+MAE Vals [18.24975078376894, 77.32800096393886, 49.19116115834462, 37.48783688644998, 32.96491757823605]
 ###########################################
 ###############  LOCATION C ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [88.86359290444013, 12.891829464296443, 47.035847995773594, 7.747385192897654, 24.51771199369076]
+Testing LightBGM Henrik
+MAE Vals [85.44874912558969, 11.453074841745511, 45.89275838381141, 8.467740475742827, 23.617592499217523]
 
 """

@@ -25,14 +25,18 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-import xgboost as xgb
 from sklearn.model_selection import train_test_split
 
+from xgboost_henrik import XGBoostHenrik
+from catboost_henrik import CatBoostHenrik
+from lightgbm_henrik import LightBGMHenrik
 
-class XGBoostHenrik(MetaModel):
+
+
+class TreeCompositeHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("XGBoost Henrik")
+        super().__init__("CatBoost Henrik")
         self.features = []
         
         self.features.extend(['month',
@@ -115,55 +119,47 @@ class XGBoostHenrik(MetaModel):
 
         return temp_df
 
-    def train(self, df):
+    def train(self, df: MetaModel):
         """
         """
 
-        temp_df = self.preprocess(df)
-
-        # Separate features and target
-        X = temp_df.drop('y', axis=1, inplace=False).copy().values
-        y = temp_df['y'].copy().values
-
-        # Train test split
-        #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
-
-        params = {
-            'objective': "reg:absoluteerror",
-            'eta': 0.25,
-            'max_depth': 7
+        self.models = {
+            "XGBoost Henrik": XGBoostHenrik(),
+            "CatBoost Henrik": CatBoostHenrik(),
+            "LightGBM Henrik": LightBGMHenrik()
         }
 
-
-        # Setup XGB
-        self.model = xgb.XGBRegressor(**params)
-
-        self.model.fit(
-            X,
-            y,
-            verbose=True,
-        )
+        for key in self.models:
+            self.models[key].train(df)
 
 
 
     def predict(self, df):
         """
         """
-        df = self.preprocess(df)
+        
+        all_preds = None
 
-        features = [col for col in df.columns if col != 'y']
-        X = df[features].values
-        y_preds = self.model.predict(X)
+        out_df = None
 
-        # Set all negative predictions to 0
-        y_preds = np.maximum(y_preds, 0)
+        for key in self.models:
+            y_pred = self.models[key].predict(df)['y_pred']
+            if(all_preds is None):
+                all_preds = pd.DataFrame(y_pred)
+            else:
+                all_preds[key] = y_pred.values
 
-        out_df = pd.DataFrame(data={'y_pred': y_preds})
+            
+        avg_series = all_preds.mean(axis=1)
 
-        return out_df
-    
+        print("The different models produced the following predictions:")
+        print(all_preds)
+        print("Averages")
+        print(avg_series)
 
-"""
+        return pd.DataFrame(avg_series, columns=['y_pred'])
+
+
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -172,40 +168,20 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    xgbh = XGBoostHenrik()
-    xgbh.test(df_location)
-
+    tch = TreeCompositeHenrik()
+    tch.test(df_location)
 
 
 # Generate submittable
-ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
-"""
+ml.utils.make_submittable("TreeCompositeHenrik.csv", model=TreeCompositeHenrik())
+
     
 """
 Best so far; 
 - all features
 
-
-params = {
-    'objective': "reg:absoluteerror",
-    'eta': 0.25,
-    'max_depth': 7 (greater than this increased error for all locations)
-}
-
-###########################################
-###############  LOCATION A ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [354.4295288609099, 153.00990366393563, 212.35652953343995, 237.27280511309309, 128.45569111321652]
-###########################################
-###############  LOCATION B ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [20.153800356330613, 81.41714111058613, 53.564878963885704, 40.62891133141144, 35.741791660790895]
-###########################################
-###############  LOCATION C ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [88.86359290444013, 12.891829464296443, 47.035847995773594, 7.747385192897654, 24.51771199369076]
+Location A -- MAE Vals [324.82611381886295, 148.21047087943, 207.51289861988295, 229.10210810565073, 124.80138500375826]
+Location B -- MAE Vals [19.43038858877779, 78.7647672132421, 51.03549389364723, 38.44011339001294, 32.82959121516759]
+Location C -- MAE Vals [75.26357382878206, 10.401516210882635, 43.9462814687844, 7.503776578680513, 22.991776009994577]
 
 """

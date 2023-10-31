@@ -25,36 +25,17 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-import xgboost as xgb
+from keras import models, layers, optimizers, regularizers
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+import tensorflow as tf
 
 
-class XGBoostHenrik(MetaModel):
+class FeedforwardNNHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("XGBoost Henrik")
+        super().__init__("Feedforward Neural Network Henrik")
         self.features = []
-        
-        self.features.extend(['month',
-                             'hour',
-                            'total_rad_1h:J',
-        'absolute_humidity_2m:gm3',
-       'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
-       'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-       'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
-       'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
-       'fresh_snow_3h:cm', 'fresh_snow_6h:cm',
-       'is_in_shadow:idx', 'msl_pressure:hPa', 'precip_5min:mm',
-       'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
-       'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-       'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-       'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2',
-       'sun_azimuth:d', 'sun_elevation:d', 'super_cooled_liquid_water:kgm2',
-       't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-       'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-       'wind_speed_w_1000hPa:ms'])
-        
-        """
 
         self.features.extend(['month',
                              'hour',
@@ -71,7 +52,7 @@ class XGBoostHenrik(MetaModel):
                             'air_density_2m:kgm3',
                             'absolute_humidity_2m:gm3'])
         
-
+        """
         self.features.extend(['super_cooled_liquid_water:kgm2',
                               'effective_cloud_cover:p', 'elevation:m',
                               'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
@@ -99,9 +80,10 @@ class XGBoostHenrik(MetaModel):
 
         temp_df['month'] = temp_df['ds'].dt.month
         ml.utils.map_month_to_seasonal(temp_df, 'month')
-   
-        # SETTING NAN TO 0 CONFORMING TO XGBOOST
-        temp_df.fillna(0, inplace=True)
+
+        # Normalize the features
+        scaler = preprocessing.MinMaxScaler()
+        temp_df[self.features] = scaler.fit_transform(temp_df[self.features])
 
         #####################################################################################
 
@@ -128,15 +110,44 @@ class XGBoostHenrik(MetaModel):
         # Train test split
         #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
 
-        params = {
-            'objective': "reg:absoluteerror",
-            'eta': 0.25,
-            'max_depth': 7
-        }
-
+        
+        # Params
+        learning_rate = 0.1
 
         # Setup XGB
-        self.model = xgb.XGBRegressor(**params)
+        self.model = models.Sequential()
+
+        self.model.add(layers.Dense(input_dim=len(self.features),
+                       units=len(self.features), 
+                       activation="relu"))
+        
+        self.model.add(layers.Dense(input_dim=len(self.features),
+                       units=128, 
+                       activation="relu"))
+        
+        self.model.add(layers.Dense(input_dim=128,
+                       units=64, 
+                       activation="relu"))
+        
+        self.model.add(layers.Dense(input_dim=64,
+                       units=32, 
+                       activation="relu"))
+        
+        self.model.add(layers.Dense(input_dim=32,
+                       units=16, 
+                       activation="relu"))
+
+        # add the output layer
+        self.model.add(layers.Dense(input_dim=16,
+                            units=1,
+                            activation='relu'))
+
+        # define our loss function and optimizer
+        self.model.compile(loss='mean_absolute_error',
+                    # Adam is a kind of gradient descent
+                    optimizer=optimizers.Adam(lr=learning_rate),
+                    metrics=['accuracy'])
+
 
         self.model.fit(
             X,
@@ -158,12 +169,15 @@ class XGBoostHenrik(MetaModel):
         # Set all negative predictions to 0
         y_preds = np.maximum(y_preds, 0)
 
+        # Make y_preds 1D
+        y_preds = np.ravel(y_preds)
+
         out_df = pd.DataFrame(data={'y_pred': y_preds})
 
         return out_df
     
 
-"""
+
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -172,40 +186,19 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    xgbh = XGBoostHenrik()
-    xgbh.test(df_location)
-
+    fnnh = FeedforwardNNHenrik()
+    fnnh.test(df_location)
 
 
 # Generate submittable
-ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
-"""
+ml.utils.make_submittable("FeedforwardNeuralNetwork.csv", model=FeedforwardNNHenrik())
+
     
 """
+NEEDS MORE PREPROCESSING ___ REMOVING NONES/NANS
+
+
 Best so far; 
 - all features
-
-
-params = {
-    'objective': "reg:absoluteerror",
-    'eta': 0.25,
-    'max_depth': 7 (greater than this increased error for all locations)
-}
-
-###########################################
-###############  LOCATION A ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [354.4295288609099, 153.00990366393563, 212.35652953343995, 237.27280511309309, 128.45569111321652]
-###########################################
-###############  LOCATION B ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [20.153800356330613, 81.41714111058613, 53.564878963885704, 40.62891133141144, 35.741791660790895]
-###########################################
-###############  LOCATION C ###############
-###########################################
-Testing XGBoost Henrik
-MAE Vals [88.86359290444013, 12.891829464296443, 47.035847995773594, 7.747385192897654, 24.51771199369076]
 
 """

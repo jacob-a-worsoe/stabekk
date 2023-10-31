@@ -25,14 +25,14 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-import xgboost as xgb
+import catboost as cb
 from sklearn.model_selection import train_test_split
 
 
-class XGBoostHenrik(MetaModel):
+class CatBoostHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("XGBoost Henrik")
+        super().__init__("CatBoost Henrik")
         self.features = []
         
         self.features.extend(['month',
@@ -56,6 +56,10 @@ class XGBoostHenrik(MetaModel):
         
         """
 
+        self.features.extend(['total_rad_1h:J', 'month', 'hour', 'sun_elevation:d', 'effective_cloud_cover:p'])
+        """
+
+        """
         self.features.extend(['month',
                              'hour',
                             'total_rad_1h:J',
@@ -70,8 +74,8 @@ class XGBoostHenrik(MetaModel):
                             'dew_or_rime:idx',
                             'air_density_2m:kgm3',
                             'absolute_humidity_2m:gm3'])
-        
-
+        """
+        """
         self.features.extend(['super_cooled_liquid_water:kgm2',
                               'effective_cloud_cover:p', 'elevation:m',
                               'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
@@ -129,14 +133,14 @@ class XGBoostHenrik(MetaModel):
         #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
 
         params = {
-            'objective': "reg:absoluteerror",
+            'objective': "MAE",
             'eta': 0.25,
-            'max_depth': 7
+            'logging_level': 'Silent'
         }
 
 
         # Setup XGB
-        self.model = xgb.XGBRegressor(**params)
+        self.model = cb.CatBoostRegressor(**params)
 
         self.model.fit(
             X,
@@ -172,40 +176,33 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    xgbh = XGBoostHenrik()
-    xgbh.test(df_location)
+    cbh = CatBoostHenrik()
+    cbh.test(df_location)
 
 
 
 # Generate submittable
-ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
+ml.utils.make_submittable("CatBoost.csv", model=CatBoostHenrik())
 """
     
 """
 Best so far; 
 - all features
 
-
-params = {
-    'objective': "reg:absoluteerror",
-    'eta': 0.25,
-    'max_depth': 7 (greater than this increased error for all locations)
-}
-
 ###########################################
 ###############  LOCATION A ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [354.4295288609099, 153.00990366393563, 212.35652953343995, 237.27280511309309, 128.45569111321652]
+Testing CatBoost Henrik
+MAE Vals [360.3682976957419, 162.46404862165602, 224.82038847064652, 240.73085583394803, 133.95529661199055]
 ###########################################
 ###############  LOCATION B ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [20.153800356330613, 81.41714111058613, 53.564878963885704, 40.62891133141144, 35.741791660790895]
+Testing CatBoost Henrik
+MAE Vals [23.139720348715645, 83.8834084925259, 52.620006354026664, 41.204193344231335, 31.86188058508645]
 ###########################################
 ###############  LOCATION C ###############
 ###########################################
-Testing XGBoost Henrik
-MAE Vals [88.86359290444013, 12.891829464296443, 47.035847995773594, 7.747385192897654, 24.51771199369076]
+Testing CatBoost Henrik
+MAE Vals [85.44874912558969, 11.453074841745511, 45.89275838381141, 8.467740475742827, 23.617592499217523]
 
 """
