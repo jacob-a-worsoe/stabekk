@@ -28,15 +28,14 @@ if True:
 from sklearn.model_selection import train_test_split
 
 from xgboost_henrik import XGBoostHenrik
-from catboost_henrik import CatBoostHenrik
 from lightgbm_henrik import LightBGMHenrik
 
 
 
-class TreeCompositeHenrik(MetaModel):
+class TreeCompositeMetaLearnerHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("TreeComposite Henrik")
+        super().__init__("TreeCompositeMetaLearner Henrik")
         self.features = []
         
         self.features.extend(['month',
@@ -125,7 +124,6 @@ class TreeCompositeHenrik(MetaModel):
 
         self.models = {
             "XGBoost Henrik": XGBoostHenrik(),
-            "CatBoost Henrik": CatBoostHenrik(),
             "LightGBM Henrik": LightBGMHenrik()
         }
 
@@ -168,20 +166,20 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    tch = TreeCompositeHenrik()
+    tch = TreeCompositeMetaLearnerHenrik()
     tch.test(df_location)
 
 
 # Generate submittable
-ml.utils.make_submittable("TreeCompositeHenrik.csv", model=TreeCompositeHenrik())
+ml.utils.make_submittable("TreeCompositeWLearnerHenrik.csv", model=TreeCompositeMetaLearnerHenrik())
 
     
 """
 Best so far; 
 - all features
 
-Location A -- MAE Vals [324.82611381886295, 148.21047087943, 207.51289861988295, 229.10210810565073, 124.80138500375826]
-Location B -- MAE Vals [19.43038858877779, 78.7647672132421, 51.03549389364723, 38.44011339001294, 32.82959121516759]
-Location C -- MAE Vals [75.26357382878206, 10.401516210882635, 43.9462814687844, 7.503776578680513, 22.991776009994577]
+Location A -- MAE Vals [327.39752025414236, 146.0252049482525, 206.88173333460966, 231.3438819417145, 124.01101371583052]
+Location B -- MAE Vals [18.55854911798735, 77.6087640086433, 50.72084260292039, 38.61256441124901, 33.40321413765224]
+Location C -- MAE Vals [87.68653025042626, 10.8540420383134, 44.821324710401846, 7.405613342373043, 23.28378479520546]
 
 """

@@ -35,7 +35,7 @@ class LightBGMHenrik(MetaModel):
         super().__init__("LightBGM Henrik")
         self.features = []
         
-        self.features.extend(['month',
+        self.features.extend(['dayofyear',
                              'hour',
                             'total_rad_1h:J',
         'absolute_humidity_2m:gm3',
@@ -60,7 +60,7 @@ class LightBGMHenrik(MetaModel):
         """
 
         """
-        self.features.extend(['month',
+        self.features.extend(['dayofyear',
                              'hour',
                             'total_rad_1h:J',
                             'fresh_snow_12h:cm',
@@ -99,10 +99,10 @@ class LightBGMHenrik(MetaModel):
         
         # Extracting hour-of-day and month, and making them cyclical
         temp_df['hour'] = temp_df['ds'].dt.hour
-        ml.utils.map_hour_to_seasonal(temp_df, 'hour')
+        temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
-        temp_df['month'] = temp_df['ds'].dt.month
-        ml.utils.map_month_to_seasonal(temp_df, 'month')
+        temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
+        temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
    
         # SETTING NAN TO 0 CONFORMING TO XGBOOST
         temp_df.fillna(0, inplace=True)
@@ -164,8 +164,8 @@ class LightBGMHenrik(MetaModel):
 
         return out_df
     
-
 """
+
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:

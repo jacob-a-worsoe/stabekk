@@ -25,8 +25,10 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
+import random
 import catboost as cb
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import TimeSeriesSplit, train_test_split
 
 
 class CatBoostHenrik(MetaModel):
@@ -36,6 +38,7 @@ class CatBoostHenrik(MetaModel):
         self.features = []
         
         self.features.extend(['month',
+                              'dayofyear',
                              'hour',
                             'total_rad_1h:J',
         'absolute_humidity_2m:gm3',
@@ -84,6 +87,45 @@ class CatBoostHenrik(MetaModel):
                               ])
         """                              
         
+    def test(self, df: pd.DataFrame, n_splits=5):
+        """
+            Expanding window cross-validation, df must have y in it for testing against predictions
+        """
+        print(f"Testing {self.model_name}")
+        column_names = df.columns.tolist()
+        if 'y' not in column_names:
+            raise Exception(f"Missing observed y in columns. Available are {column_names}")
+
+        # This is unecessary because we already clean it when calling train
+        # drop_y_with_na
+        df = df.dropna(subset=['y'], inplace=False)
+
+        MAE_values = []
+
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+
+        
+
+        for train_index, test_index in tscv.split(df):
+            train_partition = df.iloc[train_index]
+            valid_partition = df.iloc[test_index]
+
+            self.train(train_partition)
+            predictions = self.predict(valid_partition)
+            
+            y_true = valid_partition['y']
+            y_pred = predictions['y_pred']
+
+            MAE = mean_absolute_error(y_true, y_pred)
+            MAE_values.append(MAE)
+
+        #y_true_and_pred = pd.DataFrame(data={'y_true': y_true, 'y_pred': y_pred})
+        #y_true_and_pred.to_csv(f"CatBoost_y_true_and_pred_{random.randint(1,10000)}.csv")
+
+        print("MAE Vals", MAE_values)
+        
+        return MAE_values
+
     def preprocess(self, df: pd.DataFrame):
         """
         """
@@ -99,7 +141,10 @@ class CatBoostHenrik(MetaModel):
         
         # Extracting hour-of-day and month, and making them cyclical
         temp_df['hour'] = temp_df['ds'].dt.hour
-        ml.utils.map_hour_to_seasonal(temp_df, 'hour')
+        temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
+
+        temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
+        temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
 
         temp_df['month'] = temp_df['ds'].dt.month
         ml.utils.map_month_to_seasonal(temp_df, 'month')
@@ -167,7 +212,7 @@ class CatBoostHenrik(MetaModel):
         return out_df
     
 
-"""
+
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -183,7 +228,7 @@ for location in ['A', 'B', 'C']:
 
 # Generate submittable
 ml.utils.make_submittable("CatBoost.csv", model=CatBoostHenrik())
-"""
+
     
 """
 Best so far; 
