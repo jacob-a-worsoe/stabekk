@@ -31,8 +31,12 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 
 class AutoGluonHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, time_limit=None, excluded_models: list = []):
         super().__init__("AutoGluon Henrik")
+
+        self.time_limit = time_limit
+        self.excluded_models = excluded_models
+
         self.features = []
         
         self.features.extend(['month',
@@ -114,12 +118,16 @@ class AutoGluonHenrik(MetaModel):
 
 
         train_data = TabularDataset(temp_df)
+
         self.model = TabularPredictor(
             label='y',
             eval_metric='mean_absolute_error',
             problem_type='regression'
 
-        ).fit(train_data)
+        ).fit(train_data,
+              time_limit = self.time_limit,
+              excluded_model_types = self.excluded_models
+              )
 
 
     def predict(self, df):
@@ -129,8 +137,6 @@ class AutoGluonHenrik(MetaModel):
 
         features = [col for col in df.columns if col != 'y']
         X = df[features]
-
-
 
         y_preds = self.model.predict(X)
         print("AUTOGLUON MODEL OVERVIEW:")
@@ -154,16 +160,14 @@ for location in ['A', 'B', 'C']:
 
     agh = AutoGluonHenrik()
     agh.test(df_location)
+
 """
-"""
-agh = AutoGluonHenrik()
-agh.train(df)
 """
 
 
 # Generate submittable
 ml.utils.make_submittable("AutoGluon.csv", model=AutoGluonHenrik())
-
+"""
     
 """
 Best so far; 

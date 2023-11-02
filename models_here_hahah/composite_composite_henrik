@@ -27,13 +27,14 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-from lightgbm_henrik import LightBGMHenrik
+from lgbm_composite_henrik import LGBMCompositeHenrik
+from autogluon_henrik import AutoGluonHenrik
+from catboost_henrik import CatBoostHenrik
 
-
-class LGBMCompositeHenrik(MetaModel):
+class CompositeCompositeHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("LGBMComposite Henrik")
+        super().__init__("CompositeComposite Henrik")
 
         self.common_features = ['dayofyear',
                              'hour',
@@ -82,19 +83,14 @@ class LGBMCompositeHenrik(MetaModel):
 
     def train(self, df: MetaModel):
         
-        num_models = 10
-        num_rand_features = round(len(self.random_features) * 1)
+        # Excluded AutoGluon models (https://auto.gluon.ai/0.4.0/api/autogluon.predictor.html)
+        excluded_ag_models = ['GBM', 'CAT'] ### NOT GOOD!!!!!!! DONT EXCLUDEEEE
 
-        features = dict()
-
-        self.models = dict()
-
-        for i in range(num_models):
-            temp_rand_features = random.sample(self.random_features, num_rand_features)
-
-            features[i] = self.common_features + temp_rand_features
-
-            self.models[f'LGBM_{i} Henrik'] = LightBGMHenrik(features = features[i])
+        self.models = {
+            "LGBM Composite": LGBMCompositeHenrik(),
+            "AutoGluon 3min": AutoGluonHenrik(time_limit=120, excluded_models=excluded_ag_models),
+            "CatBoost Henrik": CatBoostHenrik()
+        }
 
         for key in self.models:
             self.models[key].train(df)
@@ -107,6 +103,8 @@ class LGBMCompositeHenrik(MetaModel):
         
         all_preds = None
 
+        out_df = None
+
         for key in self.models:
             y_pred = self.models[key].predict(df)['y_pred']
             if(all_preds is None):
@@ -116,6 +114,9 @@ class LGBMCompositeHenrik(MetaModel):
 
             
         avg_series = all_preds.mean(axis=1)
+
+        print("The different models produced the following predictions:")
+        print(all_preds)
 
         avg_series = np.maximum(avg_series, 0)
 
@@ -130,13 +131,13 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    lgbmch = LGBMCompositeHenrik()
-    lgbmch.test(df_location)
-
+    cch = CompositeCompositeHenrik()
+    cch.test(df_location)
+"""
 
 # Generate submittable
-ml.utils.make_submittable("LGBMComposite.csv", model=LGBMCompositeHenrik())
-"""
+ml.utils.make_submittable("CompositeComposite.csv", model=CompositeCompositeHenrik())
+
     
 """
 Best so far; 

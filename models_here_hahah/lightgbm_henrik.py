@@ -142,7 +142,7 @@ class LightBGMHenrik(MetaModel):
     
 """
 
-df = ml.data.get_training_flattened()
+df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
     print("###########################################")

@@ -143,6 +143,7 @@ class CatBoostHenrik(MetaModel):
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
+        
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
 
@@ -212,7 +213,7 @@ class CatBoostHenrik(MetaModel):
         return out_df
     
 
-
+"""
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -229,7 +230,7 @@ for location in ['A', 'B', 'C']:
 # Generate submittable
 ml.utils.make_submittable("CatBoost.csv", model=CatBoostHenrik())
 
-    
+""" 
 """
 Best so far; 
 - all features
