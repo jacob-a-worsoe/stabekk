@@ -35,13 +35,13 @@ class CatBoostHenrik(MetaModel):
     
     def __init__(self):
         super().__init__("CatBoost Henrik")
-        self.features = []
-        
-        self.features.extend(['month',
+        self.features = ['month',
                               'dayofyear',
                              'hour',
                             'total_rad_1h:J',
-        'absolute_humidity_2m:gm3',
+                            'is_estimated']
+        
+        self.features.extend(['absolute_humidity_2m:gm3',
        'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
        'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
        'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
@@ -136,6 +136,9 @@ class CatBoostHenrik(MetaModel):
         ##################################################################################### 
         # FEATURE ENGINEERING
         #####################################################################################
+
+        temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
+        temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
 
         temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
         

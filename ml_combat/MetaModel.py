@@ -27,9 +27,10 @@ class MetaModel(ABC):
         # drop_y_with_na
         df = df.dropna(subset=['y'], inplace=False)
 
-        tscv = TimeSeriesSplit(n_splits=n_splits)
-
         MAE_values = []
+        MSE_values = []
+
+        tscv = TimeSeriesSplit(n_splits=n_splits)
 
         for train_index, test_index in tscv.split(df):
             train_partition = df.iloc[train_index]
@@ -44,8 +45,9 @@ class MetaModel(ABC):
             MAE = mean_absolute_error(y_true, y_pred)
             MAE_values.append(MAE)
 
-            #print(f'Train-Test ratio:{len(train_partition)/len(valid_partition)} achieved MAE {MAE}')
+            MSE_values.append((y_pred - y_true).mean())
 
+        print("Mean Signed Error vals", MSE_values)
         print("MAE Vals", MAE_values)
         
         return MAE_values

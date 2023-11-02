@@ -33,11 +33,13 @@ class LightBGMHenrik(MetaModel):
     
     def __init__(self):
         super().__init__("LightBGM Henrik")
-        self.features = []
         
-        self.features.extend(['dayofyear',
+        self.features = ['is_estimated',
+                         'dayofyear',
                              'hour',
-                            'total_rad_1h:J',
+                            'total_rad_1h:J']
+        
+        self.features.extend([
         'absolute_humidity_2m:gm3',
        'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
        'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
@@ -94,6 +96,9 @@ class LightBGMHenrik(MetaModel):
         ##################################################################################### 
         # FEATURE ENGINEERING
         #####################################################################################
+
+        temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
+        temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
 
         temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
         
@@ -165,7 +170,7 @@ class LightBGMHenrik(MetaModel):
         return out_df
     
 """
-
+"""
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -178,7 +183,7 @@ for location in ['A', 'B', 'C']:
     lgbmh.test(df_location)
 
 
-
+"""
 # Generate submittable
 ml.utils.make_submittable("LightBGM.csv", model=LightBGMHenrik())
 """
@@ -188,19 +193,19 @@ Best so far;
 - all features
 
 ###########################################
-###############  LOCATION A ###############
-###########################################
 Testing LightBGM Henrik
-MAE Vals [311.3878765166861, 144.8697538446572, 204.35073908655116, 232.4819381008638, 124.73181941357622]
+Mean Signed Error vals [nan, nan, nan, nan, nan]
+MAE Vals [309.65732960214046, 146.4027889124817, 206.97486059176737, 232.92277550113388, 123.61086735506251]
 ###########################################
 ###############  LOCATION B ###############
 ###########################################
 Testing LightBGM Henrik
-MAE Vals [18.24975078376894, 77.32800096393886, 49.19116115834462, 37.48783688644998, 32.96491757823605]
+Mean Signed Error vals [nan, nan, nan, nan, nan]
+MAE Vals [18.665079929049778, 76.34939018737468, 48.587151633638264, 38.238040590362495, 33.255191199587024]
 ###########################################
 ###############  LOCATION C ###############
 ###########################################
 Testing LightBGM Henrik
-MAE Vals [85.44874912558969, 11.453074841745511, 45.89275838381141, 8.467740475742827, 23.617592499217523]
-
+Mean Signed Error vals [nan, nan, nan, nan, nan]
+MAE Vals [97.2792652476492, 9.245095147083797, 45.16318933775192, 7.287319189008722, 22.926363801867197]
 """
