@@ -123,6 +123,20 @@ def get_training_flattened():
     return df[['location', 'ds', 'y', 'weather_data_type'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]].copy()
 
 
+def get_training_cleaned():
+    df = get_training_flattened()
+
+    df = df[
+            ~((df.y != 0) & 
+            (df.y == df.y.shift(-1)) &
+            (df.y == df.y.shift(-2)))
+        ].copy()
+
+    df.dropna(axis=0, subset='y', inplace=True)
+
+    return df
+
+
 ### Testing
 
 def get_testing():
