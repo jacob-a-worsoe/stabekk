@@ -37,6 +37,13 @@ class FeedforwardNNHenrik(MetaModel):
         super().__init__("Feedforward Neural Network Henrik")
         self.features = []
 
+        """
+        self.features.extend(['month',
+                             'hour',
+                            'total_rad_1h:J',
+                            'sun_elevation:d'])
+        """
+        
         self.features.extend(['month',
                              'hour',
                             'total_rad_1h:J',
@@ -81,6 +88,10 @@ class FeedforwardNNHenrik(MetaModel):
         temp_df['month'] = temp_df['ds'].dt.month
         ml.utils.map_month_to_seasonal(temp_df, 'month')
 
+        # Make NaN interpolated
+        ml.utils.interpolate_na(temp_df, self.features)
+
+
         # Normalize the features
         scaler = preprocessing.MinMaxScaler()
         temp_df[self.features] = scaler.fit_transform(temp_df[self.features])
@@ -111,8 +122,7 @@ class FeedforwardNNHenrik(MetaModel):
         #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
 
         
-        # Params
-        learning_rate = 0.1
+        print('Num features:', len(self.features))
 
         # Setup XGB
         self.model = models.Sequential()
@@ -122,20 +132,30 @@ class FeedforwardNNHenrik(MetaModel):
                        activation="relu"))
         
         self.model.add(layers.Dense(input_dim=len(self.features),
-                       units=128, 
-                       activation="relu"))
-        
-        self.model.add(layers.Dense(input_dim=128,
-                       units=64, 
-                       activation="relu"))
-        
-        self.model.add(layers.Dense(input_dim=64,
                        units=32, 
                        activation="relu"))
         
         self.model.add(layers.Dense(input_dim=32,
+                       units=32, 
+                       activation="relu"))
+
+
+        self.model.add(layers.Dense(input_dim=32,
+                       units=32, 
+                       activation="relu"))
+        
+        self.model.add(layers.Dense(input_dim=32,
+                       units=32, 
+                       activation="relu"))
+        
+
+        self.model.add(layers.Dense(input_dim=32,
                        units=16, 
                        activation="relu"))
+
+        # Params
+        learning_rate = 0.1
+        
 
         # add the output layer
         self.model.add(layers.Dense(input_dim=16,
@@ -145,14 +165,14 @@ class FeedforwardNNHenrik(MetaModel):
         # define our loss function and optimizer
         self.model.compile(loss='mean_absolute_error',
                     # Adam is a kind of gradient descent
-                    optimizer=optimizers.Adam(lr=learning_rate),
-                    metrics=['accuracy'])
+                    optimizer=optimizers.SGD(learning_rate=learning_rate))
 
 
         self.model.fit(
             X,
             y,
             verbose=True,
+            epochs=10
         )
 
 
