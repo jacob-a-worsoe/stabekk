@@ -31,11 +31,13 @@ from sklearn.model_selection import train_test_split
 
 class XGBoostHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, features = None):
         super().__init__("XGBoost Henrik")
         self.features = []
-        
-        self.features.extend(['month',
+        if features is not None:
+            self.features = features  # Use the provided features if not None
+        else:
+            self.features.extend(['month',
                              'hour',
                             'total_rad_1h:J',
         'absolute_humidity_2m:gm3',
@@ -95,10 +97,10 @@ class XGBoostHenrik(MetaModel):
         
         # Extracting hour-of-day and month, and making them cyclical
         temp_df['hour'] = temp_df['ds'].dt.hour
-        ml.utils.map_hour_to_seasonal(temp_df, 'hour')
+        temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
-        temp_df['month'] = temp_df['ds'].dt.month
-        ml.utils.map_month_to_seasonal(temp_df, 'month')
+        temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
+        temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
    
         # SETTING NAN TO 0 CONFORMING TO XGBOOST
         temp_df.fillna(0, inplace=True)
