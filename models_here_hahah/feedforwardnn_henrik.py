@@ -126,7 +126,7 @@ class FeedforwardNNHenrik(MetaModel):
 
         # Setup XGB
         self.model = models.Sequential()
-
+        """
         self.model.add(layers.Dense(input_dim=len(self.features),
                        units=len(self.features), 
                        activation="relu"))
@@ -152,13 +152,14 @@ class FeedforwardNNHenrik(MetaModel):
         self.model.add(layers.Dense(input_dim=32,
                        units=16, 
                        activation="relu"))
+        """
 
         # Params
-        learning_rate = 0.1
+        learning_rate = 0.5
         
 
         # add the output layer
-        self.model.add(layers.Dense(input_dim=16,
+        self.model.add(layers.Dense(input_dim=len(self.features),
                             units=1,
                             activation='relu'))
 
@@ -172,7 +173,7 @@ class FeedforwardNNHenrik(MetaModel):
             X,
             y,
             verbose=True,
-            epochs=10
+            epochs=20
         )
 
 

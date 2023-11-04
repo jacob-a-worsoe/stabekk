@@ -28,20 +28,19 @@ if True:
 import random
 import catboost as cb
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import TimeSeriesSplit, train_test_split
+from sklearn.model_selection import GridSearchCV, KFold, TimeSeriesSplit, train_test_split
 
 
 class CatBoostHenrik(MetaModel):
     
     def __init__(self):
         super().__init__("CatBoost Henrik")
-        self.features = ['month',
+        self.features = []
+        self.features.extend(['sample_importance',
                               'dayofyear',
                              'hour',
                             'total_rad_1h:J',
-                            'is_estimated']
-        
-        self.features.extend(['absolute_humidity_2m:gm3',
+        'absolute_humidity_2m:gm3',
        'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
        'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
        'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
@@ -56,7 +55,6 @@ class CatBoostHenrik(MetaModel):
        't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
        'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
        'wind_speed_w_1000hPa:ms'])
-        
         """
 
         self.features.extend(['total_rad_1h:J', 'month', 'hour', 'sun_elevation:d', 'effective_cloud_cover:p'])
@@ -86,46 +84,6 @@ class CatBoostHenrik(MetaModel):
                               'relative_humidity_1000hPa:p', 'visibility:m'
                               ])
         """                              
-        
-    def test(self, df: pd.DataFrame, n_splits=5):
-        """
-            Expanding window cross-validation, df must have y in it for testing against predictions
-        """
-        print(f"Testing {self.model_name}")
-        column_names = df.columns.tolist()
-        if 'y' not in column_names:
-            raise Exception(f"Missing observed y in columns. Available are {column_names}")
-
-        # This is unecessary because we already clean it when calling train
-        # drop_y_with_na
-        df = df.dropna(subset=['y'], inplace=False)
-
-        MAE_values = []
-
-        tscv = TimeSeriesSplit(n_splits=n_splits)
-
-        
-
-        for train_index, test_index in tscv.split(df):
-            train_partition = df.iloc[train_index]
-            valid_partition = df.iloc[test_index]
-
-            self.train(train_partition)
-            predictions = self.predict(valid_partition)
-            
-            y_true = valid_partition['y']
-            y_pred = predictions['y_pred']
-
-            MAE = mean_absolute_error(y_true, y_pred)
-            MAE_values.append(MAE)
-
-        #y_true_and_pred = pd.DataFrame(data={'y_true': y_true, 'y_pred': y_pred})
-        #y_true_and_pred.to_csv(f"CatBoost_y_true_and_pred_{random.randint(1,10000)}.csv")
-
-        print("MAE Vals", MAE_values)
-        
-        return MAE_values
-
     def preprocess(self, df: pd.DataFrame):
         """
         """
@@ -137,6 +95,15 @@ class CatBoostHenrik(MetaModel):
         # FEATURE ENGINEERING
         #####################################################################################
 
+         # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
+        temp_df['sample_importance'] = 1
+        temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
+                    (temp_df['ds'].dt.month < 7), 'sample_importance'] = 2
+        
+        temp_df.loc[(temp_df['ds'].dt.month == 7) &
+                    (temp_df['ds'].dt.day <= 4), 'sample_importance'] = 2
+        
+        # Add is_estimated parameter
         temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
         temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
 
@@ -148,9 +115,6 @@ class CatBoostHenrik(MetaModel):
 
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
-
-        temp_df['month'] = temp_df['ds'].dt.month
-        ml.utils.map_month_to_seasonal(temp_df, 'month')
    
         # SETTING NAN TO 0 CONFORMING TO XGBOOST
         temp_df.fillna(0, inplace=True)
@@ -182,18 +146,33 @@ class CatBoostHenrik(MetaModel):
 
         params = {
             'objective': "MAE",
-            'eta': 0.25,
+            'eta': 0.08,
+            'iterations': 2000,
             'logging_level': 'Silent'
         }
 
-
+        print("PERFORMING GRID SEARCH EEEEEEEE")
         # Setup XGB
         self.model = cb.CatBoostRegressor(**params)
 
-        self.model.fit(
+        
+        # Defining your search space
+        hyperparameter_space = {'iterations': [500, 1000, 2000, 3000],
+                                'eta': [0.03, 0.7, 0.1, 0.3, 0.8],
+                                'depth': [6, 8, 10, 12]}
+                            
+        cv = KFold(n_splits=5, shuffle=True)
+                
+        reg = GridSearchCV(self.model, hyperparameter_space, 
+                        scoring = 'neg_mean_absolute_error', cv=cv,
+                        n_jobs = -1, refit = True)
+
+
+        reg.fit(
             X,
             y,
             verbose=True,
+            sample_weight=temp_df['sample_importance']
         )
 
 
@@ -225,18 +204,34 @@ for location in ['A', 'B', 'C']:
     df_location = df[df['location'] == location]
 
     cbh = CatBoostHenrik()
+    cbh.train(df_location)
     cbh.test(df_location)
 
-
+"""
 
 # Generate submittable
 ml.utils.make_submittable("CatBoost.csv", model=CatBoostHenrik())
 
-    
+""" 
 """
 Best so far; 
 - all features
+###########################################
+###############  LOCATION A ###############
+###########################################
+MAE Vals: MEAN: 176.1341224340092 ALL: [172.52231175607307, 184.97273766661144, 173.18493374775343, 177.60631038375607, 172.38431861585204]
 
+###########################################
+###############  LOCATION B ###############
+###########################################
+MAE Vals: MEAN: 33.298870766056794 ALL: [31.984411325213937, 32.8945023808993, 34.22987072040491, 33.35385282126051, 34.03171658250531]
+
+###########################################
+###############  LOCATION C ###############
+###########################################
+MAE Vals: MEAN: 20.214813508559057 ALL: [20.33303206804322, 20.57277040245728, 20.31771734681781, 19.178189500374646, 20.672358225102336]
+
+------- OLD -------- (BEFORE CHANGING TEST FUNCTION)
 ###########################################
 ###############  LOCATION A ###############
 ###########################################

@@ -2,9 +2,10 @@
 import pandas as pd
 from abc import ABC, abstractmethod
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import TimeSeriesSplit, KFold
 from sklearn.metrics import mean_absolute_error
 import numpy as np
+import statistics
 
 class MetaModel(ABC):     
     def __init__(self, model_name):
@@ -30,9 +31,10 @@ class MetaModel(ABC):
         MAE_values = []
         MSE_values = []
 
-        tscv = TimeSeriesSplit(n_splits=n_splits)
+        # tscv = TimeSeriesSplit(n_splits=n_splits)
+        kf =KFold(n_splits=5, shuffle=True)
 
-        for train_index, test_index in tscv.split(df):
+        for train_index, test_index in kf.split(df):
             train_partition = df.iloc[train_index]
             valid_partition = df.iloc[test_index]
 
@@ -47,8 +49,11 @@ class MetaModel(ABC):
 
             MSE_values.append((y_pred - y_true).mean())
 
+            print(f"Run {len(MAE_values)} MAE =", MAE)
+
         print("Mean Signed Error vals", MSE_values)
-        print("MAE Vals", MAE_values)
+        average_mae = statistics.mean(MAE_values)
+        print("MAE Vals: MEAN:", average_mae, 'ALL:' , MAE_values)
         
         return MAE_values
     

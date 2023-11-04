@@ -52,7 +52,7 @@ def make_submittable(file_name, model = None, model_dict = None):
     model dict uses location as key ({"A": MetaModel(), "B": MetaModel(), "C": MetaModel()})
     """
 
-    df = data.get_training_flattened()
+    df = data.get_training_cleaned()
     test = data.get_testing_flattened()
     ret = pd.DataFrame()
     
