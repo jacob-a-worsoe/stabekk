@@ -31,13 +31,15 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 
 class AutoGluonHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, time_limit=None, excluded_models: list = []):
         super().__init__("AutoGluon Henrik")
+
+        self.time_limit = time_limit
+        self.excluded_models = excluded_models
+
         self.features = []
         
-        self.features.extend(['month',
-                              'dayofyear',
-                             'hour',
+        self.features.extend(['sample_importance',
                             'total_rad_1h:J',
         'absolute_humidity_2m:gm3',
        'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
@@ -91,6 +93,27 @@ class AutoGluonHenrik(MetaModel):
         """
         temp_df = df.copy()
 
+        has_target = 'y' in df.columns
+
+        if has_target:
+            temp_df = temp_df[temp_df['y'].notna()]
+
+        ##################################################################################### 
+        # FEATURE ENGINEERING
+        #####################################################################################
+
+        # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
+        temp_df['sample_importance'] = 1
+        temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
+                    (temp_df['ds'].dt.month < 7), 'sample_importance'] = 2
+        
+        temp_df.loc[(temp_df['ds'].dt.month == 7) &
+                    (temp_df['ds'].dt.day <= 4), 'sample_importance'] = 2
+        
+        # Add is_estimated parameter
+        temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
+        temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
+
         temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
         
         # Extracting hour-of-day and month, and making them cyclical
@@ -99,8 +122,16 @@ class AutoGluonHenrik(MetaModel):
 
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
+   
+        # SETTING NAN TO 0 CONFORMING TO XGBOOST
+        temp_df.fillna(0, inplace=True)
 
-        return temp_df
+        #####################################################################################
+        if(has_target):
+            
+            return temp_df[self.features + ['y']]
+        else:
+            return temp_df[self.features]
 
     def train(self, df):
         """
@@ -109,7 +140,18 @@ class AutoGluonHenrik(MetaModel):
 
 
         train_data = TabularDataset(temp_df)
-        self.model = TabularPredictor(label='y', eval_metric='mean_absolute_error').fit(train_data)
+
+        self.model = TabularPredictor(
+            label='y',
+            eval_metric='mean_absolute_error',
+            problem_type='regression',
+            sample_weight='sample_importance',
+            weight_evaluation=True
+        ).fit(train_data,
+              time_limit = self.time_limit,
+              excluded_model_types = self.excluded_models,
+              presets=['good_quality']
+              )
 
 
     def predict(self, df):
@@ -119,8 +161,6 @@ class AutoGluonHenrik(MetaModel):
 
         features = [col for col in df.columns if col != 'y']
         X = df[features]
-
-
 
         y_preds = self.model.predict(X)
         print("AUTOGLUON MODEL OVERVIEW:")
@@ -132,8 +172,8 @@ class AutoGluonHenrik(MetaModel):
         return out_df
     
 
-
-df = ml.data.get_training_flattened()
+"""
+df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
     print("###########################################")
@@ -141,17 +181,32 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    agh = AutoGluonHenrik()
+    agh = AutoGluonHenrik(time_limit=60*1)
     agh.test(df_location)
 
-
-
+"""
+"""
 # Generate submittable
-ml.utils.make_submittable("AutoGluon.csv", model=AutoGluonHenrik())
+ml.utils.make_submittable("AutoGluon_w_sample_importance_1min.csv", model=AutoGluonHenrik(time_limit=60*1))
+"""
 
     
 """
 Best so far; 
 - all features
 
+W/O Datetime (probably less overfitted)
+A - MAE Vals: MEAN: 164.19447928431063 ALL: [160.86187983685323, 165.58601980572905, 170.3468009073169, 164.7286577981336, 159.4490380735203]
+B - MAE Vals: MEAN: 23.00943610618872 ALL: [23.31679828148042, 22.491542616816773, 23.372812317684765, 23.22231308753279, 22.643714227428845]
+C - MAE Vals: MEAN: 18.121459098146975 ALL: [18.592314607515814, 18.058354775096685, 18.26069749529676, 17.75047525186657, 17.945453360959053]
+
+With Datetime
+A - MAE Vals: MEAN: 149.76513207706887 ALL: [146.83345324318742, 146.6188566849808, 147.27326741611125, 149.8352757089088, 158.26480733215612]
+B - MAE Vals: MEAN: 19.99889713887556 ALL: [19.9848420222646, 19.571956697739072, 20.345230150391874, 20.21669685939001, 19.875759964592234]
+C - MAE Vals: MEAN: 16.12927055763751 ALL: [16.667676208910606, 16.15111281745623, 16.23317804404866, 15.891535578274334, 15.702850139497727]
+
+
+FJERNE VINTER alt mellom august og april -- prioritere å overfitte til testsettset
+FJERNE Tid-greier
+Droppe bagging & stacking
 """

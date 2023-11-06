@@ -3,6 +3,9 @@
 /.vscode
 /archive
 
+# added by sontvedt
+**/AutoGluonModels/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -36,7 +36,8 @@ class XGBoostHenrik(MetaModel):
         if features is not None:
             self.features = features  # Use the provided features if not None
         else:
-            self.features.extend(['month',
+            self.features.extend(['is_estimated', 'sample_importance',
+                              'dayofyear',
                              'hour',
                             'total_rad_1h:J',
         'absolute_humidity_2m:gm3',
@@ -54,32 +55,7 @@ class XGBoostHenrik(MetaModel):
        't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
        'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
        'wind_speed_w_1000hPa:ms'])
-        
-        """
-
-        self.features.extend(['month',
-                             'hour',
-                            'total_rad_1h:J',
-                            'fresh_snow_12h:cm',
-                            'snow_water:kgm2',
-                            'is_day:idx',
-                            'is_in_shadow:idx',
-                            'rain_water:kgm2',
-                            'sun_azimuth:d',
-                            'sun_elevation:d',
-                            't_1000hPa:K',
-                            'dew_or_rime:idx',
-                            'air_density_2m:kgm3',
-                            'absolute_humidity_2m:gm3'])
-        
-
-        self.features.extend(['super_cooled_liquid_water:kgm2',
-                              'effective_cloud_cover:p', 'elevation:m',
-                              'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
-                              'msl_pressure:hPa', 'precip_5min:mm', 'prob_rime:p', 
-                              'relative_humidity_1000hPa:p', 'visibility:m'
-                              ])
-        """                              
+            
         
     def preprocess(self, df: pd.DataFrame):
         """
@@ -91,6 +67,18 @@ class XGBoostHenrik(MetaModel):
         ##################################################################################### 
         # FEATURE ENGINEERING
         #####################################################################################
+
+         # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
+        temp_df['sample_importance'] = 1
+        temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
+                    (temp_df['ds'].dt.month < 7), 'sample_importance'] = 2
+        
+        temp_df.loc[(temp_df['ds'].dt.month == 7) &
+                    (temp_df['ds'].dt.day <= 4), 'sample_importance'] = 2
+        
+        # Add is_estimated parameter
+        temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
+        temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
 
         temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
         
@@ -132,9 +120,9 @@ class XGBoostHenrik(MetaModel):
         params = {
             'objective': "reg:absoluteerror",
             'eta': 0.25,
-            'max_depth': 7
+            'max_depth': 8,
+            'lambda': 1
         }
-
 
         # Setup XGB
         self.model = xgb.XGBRegressor(**params)
@@ -164,7 +152,7 @@ class XGBoostHenrik(MetaModel):
         return out_df
     
 
-
+"""
 df = ml.data.get_training_flattened()
 
 for location in ['A', 'B', 'C']:
@@ -176,7 +164,7 @@ for location in ['A', 'B', 'C']:
     xgbh = XGBoostHenrik()
     xgbh.test(df_location)
 
-
+"""
 """
 # Generate submittable
 ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
@@ -186,7 +174,7 @@ ml.utils.make_submittable("XGBoostHenrik.csv", model=XGBoostHenrik())
 """
 Best so far; 
 - all features
-
+TUNING XGBOOST: https://github.com/jeffheaton/jh-kaggle-util
 
 params = {
     'objective': "reg:absoluteerror",
