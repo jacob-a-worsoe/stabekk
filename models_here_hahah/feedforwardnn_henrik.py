@@ -155,7 +155,7 @@ class FeedforwardNNHenrik(MetaModel):
         """
 
         # Params
-        learning_rate = 0.5
+        learning_rate = 0.35
         
 
         # add the output layer
@@ -173,7 +173,8 @@ class FeedforwardNNHenrik(MetaModel):
             X,
             y,
             verbose=True,
-            epochs=20
+            epochs=200,
+            batch_size=32
         )
 
 

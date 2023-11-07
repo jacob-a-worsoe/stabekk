@@ -27,16 +27,15 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-from xg_boost_composite import XGBoostComposite
-from autogluon_henrik import AutoGluonHenrik
+from sklearn.linear_model import LinearRegression
 from catboost_henrik import CatBoostHenrik
 
-class CompositeCompositeHenrik(MetaModel):
+
+class CatCompositeHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("CompositeComposite Henrik")
-
-        self.common_features = ['dayofyear',
+        super().__init__("CatComposite Henrik")
+        self.common_features = ['is_estimated','dayofyear',
                              'hour',
                             'total_rad_1h:J',
                             'sun_elevation:d',
@@ -57,54 +56,53 @@ class CompositeCompositeHenrik(MetaModel):
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
                             'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
                             'wind_speed_w_1000hPa:ms']
-        
-        """
-
-        self.features.extend(['month',
-                             'hour',
-                            'total_rad_1h:J',
-                            'fresh_snow_12h:cm',
-                            'snow_water:kgm2',
-                            'is_day:idx',
-                            'is_in_shadow:idx',
-                            'rain_water:kgm2',
-                            'sun_azimuth:d',
-                            'sun_elevation:d',
-                            't_1000hPa:K',
-                            'dew_or_rime:idx',
-                            'air_density_2m:kgm3',
-                            'absolute_humidity_2m:gm3'])
-        
-        """                              
+                    
         
     def preprocess(self, df: pd.DataFrame):
-
         return df.copy()
 
-    def train(self, df: MetaModel):
-        
-        # Excluded AutoGluon models (https://auto.gluon.ai/0.4.0/api/autogluon.predictor.html)
-        excluded_ag_models = None ### NOT GOOD!!!!!!! DONT EXCLUDEEEE
+    
+    def train(self, df: pd.DataFrame, use_meta_learner=True):
+        num_models = 30
+        num_rand_features = round(len(self.random_features) * 0.8)  
+        df = df.copy()
+        df['month'] = df['ds'].dt.month
 
-        self.models = {
-            "XGBoost Composite": XGBoostComposite(),
-            "AutoGluon 5min": AutoGluonHenrik(time_limit=60*30, excluded_models=excluded_ag_models),
-            "CatBoost Henrik": CatBoostHenrik()
-        }
+        meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
+        print("Meta-train % of full DF", len(meta_train_df)/len(df))
+        train_df = df.loc[~df.index.isin(meta_train_df)]
+
+        features = dict()
+        self.models = dict()
+
+        for i in range(num_models):
+            temp_rand_features = random.sample(self.random_features, num_rand_features)
+            features[i] = self.common_features + temp_rand_features
+            self.models[f'CATBOOST_{i}'] = CatCompositeHenrik(features = features[i])
 
         for key in self.models:
-            self.models[key].train(df)
-
-
-
-    def predict(self, df):
-        """
-        """
+            print("Training model", key)
+            self.models[key].train(train_df)
         
+        if (use_meta_learner):                        
+            y_preds = self.predict(meta_train_df, meta_training=True)
+
+            self.meta_learner = LinearRegression(fit_intercept=False, positive=True)
+            self.meta_learner.fit(y_preds, meta_train_df['y'])
+
+            # Adjust weights so all are non-zero and positive
+            new_coefficients = np.copy(self.meta_learner.coef_) + 1/num_models
+            new_coefficients = new_coefficients / new_coefficients.min()
+            new_coefficients = new_coefficients / new_coefficients.sum()
+            self.meta_learner.coef_ = new_coefficients
+
+            print(self.meta_learner.coef_)
+    
+    def predict(self, df, meta_training = False):
+        """
+        """
         all_preds = None
-
         out_df = None
-
         for key in self.models:
             y_pred = self.models[key].predict(df)['y_pred']
             if(all_preds is None):
@@ -112,17 +110,27 @@ class CompositeCompositeHenrik(MetaModel):
             else:
                 all_preds[key] = y_pred.values
 
-            
-        avg_series = all_preds.mean(axis=1)
+        if (meta_training):
+            print("RETURNING ALL_PREDS")
+            return pd.DataFrame(all_preds)
+
+        #print("THIS HAS GONE TOO FAR!")
+
+        # Use meta-learner to calculate final output
+
+        out_np = self.meta_learner.predict(all_preds)
+        #print(out_np)
+
+        """
+        out_np = all_preds.mean(axis=1)
 
         print("The different models produced the following predictions:")
-        print(all_preds)
+        print(out_np)
 
-        avg_series = np.maximum(avg_series, 0)
+        out_np = np.maximum(out_np, 0)
+        """
+        return pd.DataFrame(out_np, columns=['y_pred'])
 
-        return pd.DataFrame(avg_series, columns=['y_pred'])
-
-"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -130,31 +138,25 @@ for location in ['A', 'B', 'C']:
     print(f"###############  LOCATION {location} ###############")
     print("###########################################")
     df_location = df[df['location'] == location]
+    cch = CatCompositeHenrik()
+    cch.test(df_location)
 
-    cch = CompositeCompositeHenrik()
-    cch.test(df_location, 2)
+
+
 """
 
 # Generate submittable
-ml.utils.make_submittable("CompositeComposite_XGBComp_GluonNoDate_Cat_run.csv", model=CompositeCompositeHenrik())
-
+ml.utils.make_submittable("LGBMComposite.csv", model=LGBMCompositeHenrik())
+"""
     
 """
 Best so far; 
 - all features
 
-WHEN AUTOGLUON HAS NO DATE 
-A - MAE Vals: MEAN: 171.2638311208058 ALL: [173.28514923345853, 169.24251300815308]
-B - MAE Vals: MEAN: 24.397672733905694 ALL: [24.804589496653787, 23.990755971157604]
-C - MAE Vals: MEAN: 19.266315601884237 ALL: [19.507996668875002, 19.02463453489347]
----------------------------------------------------------------------------------------------
-
-AFTER CHANGING TEST:
-A - MEAN: 156.89257479169723 ALL: [154.34325108984027, 156.64096647899174, 159.54940801573386, 152.97497823217262, 160.95427014174768]
----------------------------------------------------------------------------------------------
-
-
---------- OLD ---------
+LATEST RUN
+A - MAE Vals: MEAN: 183.05233386089677 ALL: [183.18792470845497, 188.75977707012484, 179.87072071664326, 179.51379971298303, 183.9294470962777]
+B - MAE Vals: MEAN: 25.807783651301374 ALL: [25.97709097110887, 25.51560936122758, 26.010697750587987, 25.61228720891779, 25.92323296466464]
+C - MAE Vals: MEAN: 20.47067950351959 ALL: [19.930035757890437, 20.656757771403267, 20.716617731720987, 21.041791948722988, 20.00819430786028]
 
 Location A -- MAE Vals [324.82611381886295, 148.21047087943, 207.51289861988295, 229.10210810565073, 124.80138500375826]
 Location B -- MAE Vals [19.43038858877779, 78.7647672132421, 51.03549389364723, 38.44011339001294, 32.82959121516759]
