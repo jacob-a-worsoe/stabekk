@@ -33,28 +33,31 @@ from sklearn.model_selection import GridSearchCV, KFold, TimeSeriesSplit, train_
 
 class CatBoostHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, features=None):
         super().__init__("CatBoost Henrik")
-        self.features = []
-        self.features.extend(['sample_importance',
-                              'dayofyear',
-                             'hour',
-                            'total_rad_1h:J',
-        'absolute_humidity_2m:gm3',
-       'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
-       'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-       'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
-       'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
-       'fresh_snow_3h:cm', 'fresh_snow_6h:cm',
-       'is_in_shadow:idx', 'msl_pressure:hPa', 'precip_5min:mm',
-       'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
-       'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-       'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-       'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2',
-       'sun_azimuth:d', 'sun_elevation:d', 'super_cooled_liquid_water:kgm2',
-       't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-       'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-       'wind_speed_w_1000hPa:ms'])
+        if(features):
+            self.features = features
+        else:
+            self.features = []
+            self.features.extend(['sample_importance',
+                                'dayofyear',
+                                'hour',
+                                'total_rad_1h:J',
+            'absolute_humidity_2m:gm3',
+            'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+            'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+            'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
+            'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+            'fresh_snow_3h:cm', 'fresh_snow_6h:cm',
+            'is_in_shadow:idx', 'msl_pressure:hPa', 'precip_5min:mm',
+            'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
+            'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+            'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
+            'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2',
+            'sun_azimuth:d', 'sun_elevation:d', 'super_cooled_liquid_water:kgm2',
+            't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
+            'wind_speed_w_1000hPa:ms'])
         """
 
         self.features.extend(['total_rad_1h:J', 'month', 'hour', 'sun_elevation:d', 'effective_cloud_cover:p'])
@@ -146,8 +149,9 @@ class CatBoostHenrik(MetaModel):
 
         params = {
             'objective': "MAE",
-            'eta': 0.08,
-            'iterations': 2000,
+            'learning_rate': 0.05,
+            'depth': 9,
+            'iterations': 4000,
             'logging_level': 'Silent'
         }
 
@@ -158,31 +162,24 @@ class CatBoostHenrik(MetaModel):
         """
         print("PERFORMING GRID SEARCH EEEEEEEE")
         # Defining your search space
-        hyperparameter_space = {'iterations': [500, 1000, 2000, 3000],
-                                'eta': [0.03, 0.7, 0.1, 0.3, 0.8],
-                                'depth': [6, 8, 10, 12]}
+        hyperparameter_space = {'iterations': [2000, 3000, 4000],
+                                'learning_rate': [0.03, 0.05, 0.07, 0.1, 0.12],
+                                'depth': [7, 8, 9]}
                             
-        cv = KFold(n_splits=5, shuffle=True)
-                
-        reg = GridSearchCV(self.model, hyperparameter_space, 
-                        scoring = 'neg_mean_absolute_error', cv=cv,
-                        n_jobs = -1, refit = True)
+        self.model.grid_search(hyperparameter_space, X, y, 3)
 
-
-        reg.fit(
-            X,
-            y,
-            verbose=True,
-            sample_weight=temp_df['sample_importance']
-        )
+        print("AFTER HYPER_PARAM GRID SEARCH FOUND:")
+        print(self.model.get_all_params())
+        print("--------------------------------------")
         """
-
+        
         self.model.fit(
             X,
             y,
             verbose=True,
             sample_weight=temp_df['sample_importance']
         )
+        
 
 
     def predict(self, df):
@@ -201,8 +198,8 @@ class CatBoostHenrik(MetaModel):
 
         return out_df
     
-
 """
+
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -213,8 +210,8 @@ for location in ['A', 'B', 'C']:
 
     cbh = CatBoostHenrik()
     cbh.train(df_location)
-    cbh.test(df_location)
-"""
+    #cbh.test(df_location)
+    """
 """
 
 # Generate submittable

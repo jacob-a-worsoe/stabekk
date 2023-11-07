@@ -35,7 +35,7 @@ class CatCompositeHenrik(MetaModel):
     
     def __init__(self):
         super().__init__("CatComposite Henrik")
-        self.common_features = ['is_estimated','dayofyear',
+        self.common_features = ['sample_importance', 'is_estimated','dayofyear',
                              'hour',
                             'total_rad_1h:J',
                             'sun_elevation:d',
@@ -63,8 +63,8 @@ class CatCompositeHenrik(MetaModel):
 
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
-        num_models = 30
-        num_rand_features = round(len(self.random_features) * 0.8)  
+        num_models = 1
+        num_rand_features = round(len(self.random_features) * 0.7)  
         df = df.copy()
         df['month'] = df['ds'].dt.month
 
@@ -78,7 +78,7 @@ class CatCompositeHenrik(MetaModel):
         for i in range(num_models):
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
-            self.models[f'CATBOOST_{i}'] = CatCompositeHenrik(features = features[i])
+            self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i])
 
         for key in self.models:
             print("Training model", key)
@@ -99,8 +99,7 @@ class CatCompositeHenrik(MetaModel):
             print(self.meta_learner.coef_)
     
     def predict(self, df, meta_training = False):
-        """
-        """
+
         all_preds = None
         out_df = None
         for key in self.models:
@@ -116,8 +115,7 @@ class CatCompositeHenrik(MetaModel):
 
         #print("THIS HAS GONE TOO FAR!")
 
-        # Use meta-learner to calculate final output
-
+        # Use meta-learner to calculate final output (DISABLED)
         out_np = self.meta_learner.predict(all_preds)
         #print(out_np)
 
@@ -129,8 +127,11 @@ class CatCompositeHenrik(MetaModel):
 
         out_np = np.maximum(out_np, 0)
         """
+
         return pd.DataFrame(out_np, columns=['y_pred'])
 
+
+"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -141,25 +142,17 @@ for location in ['A', 'B', 'C']:
     cch = CatCompositeHenrik()
     cch.test(df_location)
 
-
-
 """
 
 # Generate submittable
-ml.utils.make_submittable("LGBMComposite.csv", model=LGBMCompositeHenrik())
-"""
+ml.utils.make_submittable("CatComposite_30models.csv", model=CatCompositeHenrik())
+
     
 """
 Best so far; 
 - all features
 
-LATEST RUN
-A - MAE Vals: MEAN: 183.05233386089677 ALL: [183.18792470845497, 188.75977707012484, 179.87072071664326, 179.51379971298303, 183.9294470962777]
-B - MAE Vals: MEAN: 25.807783651301374 ALL: [25.97709097110887, 25.51560936122758, 26.010697750587987, 25.61228720891779, 25.92323296466464]
-C - MAE Vals: MEAN: 20.47067950351959 ALL: [19.930035757890437, 20.656757771403267, 20.716617731720987, 21.041791948722988, 20.00819430786028]
-
-Location A -- MAE Vals [324.82611381886295, 148.21047087943, 207.51289861988295, 229.10210810565073, 124.80138500375826]
-Location B -- MAE Vals [19.43038858877779, 78.7647672132421, 51.03549389364723, 38.44011339001294, 32.82959121516759]
-Location C -- MAE Vals [75.26357382878206, 10.401516210882635, 43.9462814687844, 7.503776578680513, 22.991776009994577]
-
+A - MAE Vals: MEAN: 172.99512889193852 ALL: [170.54521130676503, 172.51186547203955, 174.60158893679454, 170.50780789497156, 176.80917084912187]
+B - MAE Vals: MEAN: 24.559548635563765 ALL: [25.072575416215365, 24.284983043035556, 24.418842542053806, 24.088704659474185, 24.932637517039904]
+C - MAE Vals: MEAN: 19.222937143220545 ALL: [18.699964153906414, 19.994489192852583, 19.932591821491265, 18.982563126163527, 18.505077421688934]
 """
