@@ -27,13 +27,14 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
-from lightgbm_henrik import LightBGMHenrik
+from xg_boost_composite import XGBoostComposite
+from autogluon_henrik import AutoGluonHenrik
+from catboost_henrik import CatBoostHenrik
 
-
-class LGBMCompositeHenrik(MetaModel):
+class CompositeCompositeHenrik(MetaModel):
     
     def __init__(self):
-        super().__init__("LGBMComposite Henrik")
+        super().__init__("CompositeComposite Henrik")
 
         self.common_features = ['dayofyear',
                              'hour',
@@ -82,19 +83,14 @@ class LGBMCompositeHenrik(MetaModel):
 
     def train(self, df: MetaModel):
         
-        num_models = 30
-        num_rand_features = round(len(self.random_features) * 1)
+        # Excluded AutoGluon models (https://auto.gluon.ai/0.4.0/api/autogluon.predictor.html)
+        excluded_ag_models = None ### NOT GOOD!!!!!!! DONT EXCLUDEEEE
 
-        features = dict()
-
-        self.models = dict()
-
-        for i in range(num_models):
-            temp_rand_features = random.sample(self.random_features, num_rand_features)
-            features[i] = self.common_features + temp_rand_features
-            self.models[f'LGBM_{i} Henrik'] = LightBGMHenrik(features = features[i])
-
-            print(f'LGBM_{i} Henrik')
+        self.models = {
+            "XGBoost Composite": XGBoostComposite(),
+            "AutoGluon 5min": AutoGluonHenrik(time_limit=60*5, excluded_models=excluded_ag_models),
+            "CatBoost Henrik": CatBoostHenrik()
+        }
 
         for key in self.models:
             self.models[key].train(df)
@@ -107,6 +103,8 @@ class LGBMCompositeHenrik(MetaModel):
         
         all_preds = None
 
+        out_df = None
+
         for key in self.models:
             y_pred = self.models[key].predict(df)['y_pred']
             if(all_preds is None):
@@ -117,11 +115,14 @@ class LGBMCompositeHenrik(MetaModel):
             
         avg_series = all_preds.mean(axis=1)
 
+        print("The different models produced the following predictions:")
+        print(all_preds)
+
         avg_series = np.maximum(avg_series, 0)
 
         return pd.DataFrame(avg_series, columns=['y_pred'])
 
-
+"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -130,23 +131,30 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    lgbmch = LGBMCompositeHenrik()
-    lgbmch.test(df_location)
-
+    cch = CompositeCompositeHenrik()
+    cch.test(df_location, 2)
 """
 
 # Generate submittable
-ml.utils.make_submittable("LGBMComposite.csv", model=LGBMCompositeHenrik())
-"""
+ml.utils.make_submittable("CompositeComposite_XGBComp_GluonNoDate_Cat_run.csv", model=CompositeCompositeHenrik())
+
     
 """
 Best so far; 
 - all features
 
-LATEST RUN
-A - MAE Vals: MEAN: 183.05233386089677 ALL: [183.18792470845497, 188.75977707012484, 179.87072071664326, 179.51379971298303, 183.9294470962777]
-B - MAE Vals: MEAN: 25.807783651301374 ALL: [25.97709097110887, 25.51560936122758, 26.010697750587987, 25.61228720891779, 25.92323296466464]
-C - MAE Vals: MEAN: 20.47067950351959 ALL: [19.930035757890437, 20.656757771403267, 20.716617731720987, 21.041791948722988, 20.00819430786028]
+WHEN AUTOGLUON HAS NO DATE 
+A - MAE Vals: MEAN: 171.2638311208058 ALL: [173.28514923345853, 169.24251300815308]
+B - MAE Vals: MEAN: 24.397672733905694 ALL: [24.804589496653787, 23.990755971157604]
+C - MAE Vals: MEAN: 19.266315601884237 ALL: [19.507996668875002, 19.02463453489347]
+---------------------------------------------------------------------------------------------
+
+AFTER CHANGING TEST:
+A - MEAN: 156.89257479169723 ALL: [154.34325108984027, 156.64096647899174, 159.54940801573386, 152.97497823217262, 160.95427014174768]
+---------------------------------------------------------------------------------------------
+
+
+--------- OLD ---------
 
 Location A -- MAE Vals [324.82611381886295, 148.21047087943, 207.51289861988295, 229.10210810565073, 124.80138500375826]
 Location B -- MAE Vals [19.43038858877779, 78.7647672132421, 51.03549389364723, 38.44011339001294, 32.82959121516759]

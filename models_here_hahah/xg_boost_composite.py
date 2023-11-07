@@ -30,13 +30,19 @@ if True:
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
 
+from sklearn.linear_model import LinearRegression
+from keras import models, layers, optimizers, regularizers
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+import tensorflow as tf
+
 
 class XGBoostComposite(MetaModel):
     
     def __init__(self):
         super().__init__("XGBoost Composite")
 
-        self.common_features = ['dayofyear',
+        self.common_features = ['is_estimated','dayofyear',
                              'hour',
                             'total_rad_1h:J',
                             'sun_elevation:d',
@@ -63,9 +69,15 @@ class XGBoostComposite(MetaModel):
         return df.copy()
 
     
-    def train(self, df: MetaModel):
-        num_models = 10
+    def train(self, df: pd.DataFrame, use_meta_learner=True):
+        num_models = 30
         num_rand_features = round(len(self.random_features) * 0.8)  
+        df = df.copy()
+        df['month'] = df['ds'].dt.month
+
+        meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
+        print("Meta-train % of full DF", len(meta_train_df)/len(df))
+        train_df = df.loc[~df.index.isin(meta_train_df)]
 
         features = dict()
         self.models = dict()
@@ -76,10 +88,24 @@ class XGBoostComposite(MetaModel):
             self.models[f'XGBOOST_{i}'] = XGBoostHenrik(features = features[i])
 
         for key in self.models:
-            self.models[key].train(df)
+            print("Training model", key)
+            self.models[key].train(train_df)
+        
+        if (use_meta_learner):                        
+            y_preds = self.predict(meta_train_df, meta_training=True)
 
+            self.meta_learner = LinearRegression(fit_intercept=False, positive=True)
+            self.meta_learner.fit(y_preds, meta_train_df['y'])
+
+            # Adjust weights so all are non-zero and positive
+            new_coefficients = np.copy(self.meta_learner.coef_) + 1/num_models
+            new_coefficients = new_coefficients / new_coefficients.min()
+            new_coefficients = new_coefficients / new_coefficients.sum()
+            self.meta_learner.coef_ = new_coefficients
+
+            print(self.meta_learner.coef_)
     
-    def predict(self, df):
+    def predict(self, df, meta_training = False):
         """
         """
         all_preds = None
@@ -90,16 +116,29 @@ class XGBoostComposite(MetaModel):
                 all_preds = pd.DataFrame(y_pred)
             else:
                 all_preds[key] = y_pred.values
-        avg_series = all_preds.mean(axis=1)
+
+        if (meta_training):
+            print("RETURNING ALL_PREDS")
+            return pd.DataFrame(all_preds)
+
+        #print("THIS HAS GONE TOO FAR!")
+
+        # Use meta-learner to calculate final output
+
+        out_np = self.meta_learner.predict(all_preds)
+        #print(out_np)
+
+        """
+        out_np = all_preds.mean(axis=1)
 
         print("The different models produced the following predictions:")
-        print(all_preds)
+        print(out_np)
 
-        avg_series = np.maximum(avg_series, 0)
+        out_np = np.maximum(out_np, 0)
+        """
+        return pd.DataFrame(out_np, columns=['y_pred'])
 
-        return pd.DataFrame(avg_series, columns=['y_pred'])
-
-df = ml.data.get_training_flattened()
+df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
     print("###########################################")
@@ -109,14 +148,27 @@ for location in ['A', 'B', 'C']:
     xgbh = XGBoostComposite()
     xgbh.test(df_location)
 
-# Generate submittable
-ml.utils.make_submittable("XGBoostComposite.csv", model=XGBoostComposite())
 
+"""
+# Generate submittable
+ml.utils.make_submittable("XGBoostComposite_metalearner2_linreg.csv", model=XGBoostComposite())
+"""
 
 """ 
 XGBoostComposite.csv
 Submitted by Simen Burgos · Submitted 36 seconds ago
 Score: 153.89125
+
+LATEST RUNS
+A - MAE Vals: MEAN: 176.62721808380883 ALL: [168.99877575019693, 180.4480632325727, 178.82757516377688, 176.05084922389838, 178.81082704859918]
+B - MAE Vals: MEAN: 24.398035517766242 ALL: [23.2599901705447, 25.173845344778513, 24.416798181148753, 24.993148435509546, 24.1463954568497]
+C - MAE Vals: MEAN: 18.86035746641255 ALL: [19.491336821031307, 18.651404001893223, 18.51260557692587, 18.329057939720226, 19.317382992492124]
+
+
+MAE Vals: MEAN: 176.4710274970065 ALL: [176.41420818126772, 176.8975072766353, 178.2765501915676, 170.0597955739673, 180.70707626159455]
+MAE Vals: MEAN: 175.39589141177154 ALL: [178.58500530367314, 175.55516430285064, 179.60437768681572, 169.4643138372933, 173.77059592822494]
+Lin.reg MAE Vals: MEAN: 175.72564969509736 ALL: [186.16878994566966, 176.53021014601214, 173.43554724344588, 175.2040667374494, 167.2896344029097]
+
 MAE Vals [332.47301366935926, 151.45355247654584, 208.1210777367038, 230.58026635990421, 127.19053024488258]
 MAE Vals [18.71474734624145, 78.44080479557826, 48.593741592237855, 37.43438953168417, 35.186301673912666]
 MAE Vals [124.32228000041772, 11.053873781924862, 44.72883110227043, 7.794294405931378, 22.627332494436406]
@@ -125,7 +177,7 @@ MAE Vals [124.32228000041772, 11.053873781924862, 44.72883110227043, 7.794294405
 PROPOSALS FOR IMPROVEMENTS
 - DIFFERENT COMMON FEATURES (SEARCH FOR OPTIMAL)
 - AVERAGE MORE MODELS -> UTILIZE LLN
-- HYPERPARAMETER TUNING: TREE DEPTH ETC. 
+- HYPERPARAMETER TUNING: TREE DEPTH ETC.
 
 
 -------------------

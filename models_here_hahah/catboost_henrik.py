@@ -151,11 +151,12 @@ class CatBoostHenrik(MetaModel):
             'logging_level': 'Silent'
         }
 
-        print("PERFORMING GRID SEARCH EEEEEEEE")
+        
         # Setup XGB
         self.model = cb.CatBoostRegressor(**params)
 
-        
+        """
+        print("PERFORMING GRID SEARCH EEEEEEEE")
         # Defining your search space
         hyperparameter_space = {'iterations': [500, 1000, 2000, 3000],
                                 'eta': [0.03, 0.7, 0.1, 0.3, 0.8],
@@ -174,7 +175,14 @@ class CatBoostHenrik(MetaModel):
             verbose=True,
             sample_weight=temp_df['sample_importance']
         )
+        """
 
+        self.model.fit(
+            X,
+            y,
+            verbose=True,
+            sample_weight=temp_df['sample_importance']
+        )
 
 
     def predict(self, df):
@@ -194,8 +202,8 @@ class CatBoostHenrik(MetaModel):
         return out_df
     
 
-
-df = ml.data.get_training_flattened()
+"""
+df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
     print("###########################################")
@@ -206,7 +214,7 @@ for location in ['A', 'B', 'C']:
     cbh = CatBoostHenrik()
     cbh.train(df_location)
     cbh.test(df_location)
-
+"""
 """
 
 # Generate submittable
@@ -219,17 +227,17 @@ Best so far;
 ###########################################
 ###############  LOCATION A ###############
 ###########################################
-MAE Vals: MEAN: 176.1341224340092 ALL: [172.52231175607307, 184.97273766661144, 173.18493374775343, 177.60631038375607, 172.38431861585204]
+MAE Vals: MEAN: 176.14066773038115 ALL: [181.97487500981785, 176.85836905536448, 171.72775237238918, 179.38213214944784, 170.76021006488642]
 
 ###########################################
 ###############  LOCATION B ###############
 ###########################################
-MAE Vals: MEAN: 33.298870766056794 ALL: [31.984411325213937, 32.8945023808993, 34.22987072040491, 33.35385282126051, 34.03171658250531]
+MAE Vals: MEAN: 25.223891878849738 ALL: [25.700806897777664, 26.695572499908113, 23.23840744259385, 24.533980368618945, 25.95069218535011]
 
 ###########################################
 ###############  LOCATION C ###############
 ###########################################
-MAE Vals: MEAN: 20.214813508559057 ALL: [20.33303206804322, 20.57277040245728, 20.31771734681781, 19.178189500374646, 20.672358225102336]
+MAE Vals: MEAN: 19.864001427699083 ALL: [19.638891777935232, 20.648785428223455, 19.68583669963377, 20.02265140733278, 19.32384182537018]
 
 ------- OLD -------- (BEFORE CHANGING TEST FUNCTION)
 ###########################################
