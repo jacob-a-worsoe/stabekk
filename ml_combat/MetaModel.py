@@ -32,7 +32,7 @@ class MetaModel(ABC):
         MSE_values = []
 
         # tscv = TimeSeriesSplit(n_splits=n_splits)
-        kf =KFold(n_splits=5, shuffle=True)
+        kf =KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
         for train_index, test_index in kf.split(df):
             train_partition = df.iloc[train_index]
