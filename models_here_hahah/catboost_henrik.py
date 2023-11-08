@@ -116,6 +116,10 @@ class CatBoostHenrik(MetaModel):
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
+        temp_df['month'] = temp_df['month'].dt.month
+        temp_df['month'] = (np.sin(2 * np.pi * (temp_df['month'])/ 12) + 1) / 2
+
+
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
    
@@ -159,26 +163,26 @@ class CatBoostHenrik(MetaModel):
         # Setup XGB
         self.model = cb.CatBoostRegressor(**params)
 
-        """
+        
         print("PERFORMING GRID SEARCH EEEEEEEE")
         # Defining your search space
-        hyperparameter_space = {'iterations': [2000, 3000, 4000],
-                                'learning_rate': [0.03, 0.05, 0.07, 0.1, 0.12],
-                                'depth': [7, 8, 9]}
+        hyperparameter_space = {'iterations': [3500, 4000, 5000, 6000, 7000],
+                                'learning_rate': [0.04, 0.045, 0.05, 0.55, 0.06],
+                                'depth': [9, 10, 11]}
                             
         self.model.grid_search(hyperparameter_space, X, y, 3)
 
         print("AFTER HYPER_PARAM GRID SEARCH FOUND:")
         print(self.model.get_all_params())
         print("--------------------------------------")
-        """
         
-        self.model.fit(
-            X,
-            y,
-            verbose=True,
-            sample_weight=temp_df['sample_importance']
-        )
+        
+        # self.model.fit(
+        #     X,
+        #     y,
+        #     verbose=True,
+        #     sample_weight=temp_df['sample_importance']
+        # )
         
 
 
@@ -198,11 +202,10 @@ class CatBoostHenrik(MetaModel):
 
         return out_df
     
-"""
 
 df = ml.data.get_training_cleaned()
 
-for location in ['A', 'B', 'C']:
+for location in ['A']:#, 'B', 'C']:
     print("###########################################")
     print(f"###############  LOCATION {location} ###############")
     print("###########################################")
@@ -211,7 +214,6 @@ for location in ['A', 'B', 'C']:
     cbh = CatBoostHenrik()
     cbh.train(df_location)
     #cbh.test(df_location)
-    """
 """
 
 # Generate submittable
