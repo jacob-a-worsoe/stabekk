@@ -162,10 +162,10 @@ for location in ['A', 'B', 'C']:
     cch.test(df_location)
 
 """
-
+"""
 # Generate submittable
 ml.utils.make_submittable("CatComposite_5models_henrik_samp_weight.csv", model=CatCompositeHenrik())
-
+"""
     
 """
 Best so far; 

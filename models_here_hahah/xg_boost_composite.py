@@ -98,10 +98,14 @@ class XGBoostComposite(MetaModel):
             self.meta_learner.fit(y_preds, meta_train_df['y'])
 
             # Adjust weights so all are non-zero and positive
+            """
             new_coefficients = np.copy(self.meta_learner.coef_) + 1/num_models
             new_coefficients = new_coefficients / new_coefficients.min()
             new_coefficients = new_coefficients / new_coefficients.sum()
             self.meta_learner.coef_ = new_coefficients
+            """
+
+            self.meta_learner.coef_ = np.full(shape = self.meta_learner.coef_.shape, fill_value = 1/num_models)
 
             print(self.meta_learner.coef_)
     
@@ -138,6 +142,7 @@ class XGBoostComposite(MetaModel):
         """
         return pd.DataFrame(out_np, columns=['y_pred'])
 
+"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -147,7 +152,7 @@ for location in ['A', 'B', 'C']:
     df_location = df[df['location'] == location]
     xgbh = XGBoostComposite()
     xgbh.test(df_location)
-
+"""
 
 """
 # Generate submittable
@@ -158,6 +163,11 @@ ml.utils.make_submittable("XGBoostComposite_metalearner2_linreg.csv", model=XGBo
 XGBoostComposite.csv
 Submitted by Simen Burgos · Submitted 36 seconds ago
 Score: 153.89125
+
+RUN W/O METALEARNER
+A - MAE Vals: MEAN: 176.3137540838054 ALL: [173.93848071352167, 178.87022067271326, 175.52641587171843, 173.1586905930062, 180.0749625680675]
+B - MAE Vals: MEAN: 24.32785782903416 ALL: [25.165102671203, 23.908014061494903, 24.418097161092525, 23.696784644168268, 24.451290607212087]
+C - MAE Vals: MEAN: 18.814177198806142 ALL: [18.446495520235107, 19.774100430810265, 19.37501217584922, 18.5930175990732, 17.88226026806292]
 
 LATEST RUNS
 A - MAE Vals: MEAN: 176.62721808380883 ALL: [168.99877575019693, 180.4480632325727, 178.82757516377688, 176.05084922389838, 178.81082704859918]
