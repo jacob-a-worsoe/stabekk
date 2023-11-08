@@ -116,7 +116,7 @@ class CatBoostHenrik(MetaModel):
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
-        temp_df['month'] = temp_df['month'].dt.month
+        temp_df['month'] = temp_df['ds'].dt.month
         temp_df['month'] = (np.sin(2 * np.pi * (temp_df['month'])/ 12) + 1) / 2
 
 
@@ -203,17 +203,17 @@ class CatBoostHenrik(MetaModel):
         return out_df
     
 
-df = ml.data.get_training_cleaned()
+# df = ml.data.get_training_cleaned()
 
-for location in ['A']:#, 'B', 'C']:
-    print("###########################################")
-    print(f"###############  LOCATION {location} ###############")
-    print("###########################################")
-    df_location = df[df['location'] == location]
+# for location in ['A']:#, 'B', 'C']:
+#     print("###########################################")
+#     print(f"###############  LOCATION {location} ###############")
+#     print("###########################################")
+#     df_location = df[df['location'] == location]
 
-    cbh = CatBoostHenrik()
-    cbh.train(df_location)
-    #cbh.test(df_location)
+#     cbh = CatBoostHenrik()
+#     cbh.train(df_location)
+#     #cbh.test(df_location)
 """
 
 # Generate submittable

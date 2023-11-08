@@ -43,31 +43,31 @@ class CatCompositeHenrik(MetaModel):
                             'is_in_shadow:idx',
                             'effective_cloud_cover:p']
         
-        # self.random_features = ['absolute_humidity_2m:gm3',
-        #                     'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
-        #                     'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-        #                     'dew_point_2m:K', 'elevation:m',
-        #                     'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
-        #                     'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
-        #                     'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
-        #                     'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-        #                     'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-        #                     'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
-        #                     't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-        #                     'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-        #                     'wind_speed_w_1000hPa:ms']
         self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
                             'dew_point_2m:K', 'elevation:m',
-                            'msl_pressure:hPa', 'precip_5min:mm',
+                            'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+                            'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
                             'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
                             'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa',
-                            'super_cooled_liquid_water:kgm2',
+                            'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
+                            'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
                             'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
                             'wind_speed_w_1000hPa:ms']
+        # self.random_features = ['absolute_humidity_2m:gm3',
+        #                     'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+        #                     'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+        #                     'dew_point_2m:K', 'elevation:m',
+        #                     'msl_pressure:hPa', 'precip_5min:mm',
+        #                     'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
+        #                     'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+        #                     'sfc_pressure:hPa',
+        #                     'super_cooled_liquid_water:kgm2',
+        #                     't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+        #                     'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
+        #                     'wind_speed_w_1000hPa:ms']
                     
         
     def preprocess(self, df: pd.DataFrame):
@@ -75,7 +75,7 @@ class CatCompositeHenrik(MetaModel):
 
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
-        num_models = 1
+        num_models = 5
         num_rand_features = round(len(self.random_features) * 0.7)  
         df = df.copy()
         df['month'] = df['ds'].dt.month
@@ -83,6 +83,9 @@ class CatCompositeHenrik(MetaModel):
         meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
         print("Meta-train % of full DF", len(meta_train_df)/len(df))
         train_df = df.loc[~df.index.isin(meta_train_df)]
+
+        selected_months = train_df[(train_df['month'] == 5) | (train_df['month'] == 6)].copy()
+        train_df = pd.concat([train_df, selected_months], ignore_index=True)
 
         features = dict()
         self.models = dict()
@@ -157,7 +160,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CatComposite_30models.csv", model=CatCompositeHenrik())
+ml.utils.make_submittable("CatComposite_5models_Jacob.csv", model=CatCompositeHenrik())
 
     
 """

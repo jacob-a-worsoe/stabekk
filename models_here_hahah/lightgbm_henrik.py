@@ -145,7 +145,7 @@ class LightBGMHenrik(MetaModel):
         return out_df
     
 
-"""
+
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -157,7 +157,7 @@ for location in ['A', 'B', 'C']:
     lgbmh = LightBGMHenrik()
     lgbmh.test(df_location)
 
-
+"""
 # Generate submittable
 ml.utils.make_submittable("LightBGM.csv", model=LightBGMHenrik())
 """ 
