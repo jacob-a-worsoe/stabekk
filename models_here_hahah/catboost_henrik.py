@@ -153,9 +153,9 @@ class CatBoostHenrik(MetaModel):
 
         params = {
             'objective': "MAE",
-            'learning_rate': 0.05,
+            'learning_rate': 0.04,
             'depth': 9,
-            'iterations': 4000,
+            'iterations': 7000,
             'logging_level': 'Silent'
         }
 
@@ -163,7 +163,7 @@ class CatBoostHenrik(MetaModel):
         # Setup XGB
         self.model = cb.CatBoostRegressor(**params)
 
-        
+        """
         print("PERFORMING GRID SEARCH EEEEEEEE")
         # Defining your search space
         hyperparameter_space = {'iterations': [3500, 4000, 5000, 6000, 7000],
@@ -175,14 +175,14 @@ class CatBoostHenrik(MetaModel):
         print("AFTER HYPER_PARAM GRID SEARCH FOUND:")
         print(self.model.get_all_params())
         print("--------------------------------------")
+        """
         
-        
-        # self.model.fit(
-        #     X,
-        #     y,
-        #     verbose=True,
-        #     sample_weight=temp_df['sample_importance']
-        # )
+        self.model.fit(
+             X,
+             y,
+             verbose=True,
+             sample_weight=temp_df['sample_importance']
+        )
         
 
 
