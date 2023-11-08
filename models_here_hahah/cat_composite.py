@@ -33,9 +33,12 @@ from catboost_henrik import CatBoostHenrik
 
 class CatCompositeHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, num_models=10):
         super().__init__("CatComposite Henrik")
+
+        self.num_models = num_models
         self.common_features = ['sample_importance', 'is_estimated','dayofyear',
+                                'is_day:idx',
                              'hour', 'month',
                             'total_rad_1h:J',
                             'sun_elevation:d',
@@ -46,16 +49,15 @@ class CatCompositeHenrik(MetaModel):
         self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K', 'elevation:m',
+                            'dew_point_2m:K',
                             'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
                             'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
                             'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
                             'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-                            'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
+                            'sfc_pressure:hPa', 'snow_depth:cm',
+                            'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-                            'wind_speed_w_1000hPa:ms']
+                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
         """
         # FEATURES WITHOUT SNOW
         self.random_features = ['absolute_humidity_2m:gm3',
@@ -77,7 +79,7 @@ class CatCompositeHenrik(MetaModel):
 
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
-        num_models = 10
+        num_models = self.num_models
         num_rand_features = round(len(self.random_features) * 0.7)  
         df = df.copy()
         df['month'] = df['ds'].dt.month
@@ -162,7 +164,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CatComposite_30models.csv", model=CatCompositeHenrik())
+ml.utils.make_submittable("CatComposite_5models_henrik_samp_weight.csv", model=CatCompositeHenrik())
 
     
 """

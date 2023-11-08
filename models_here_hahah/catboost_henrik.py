@@ -43,6 +43,7 @@ class CatBoostHenrik(MetaModel):
                                 'dayofyear',
                                 'hour',
                                 'total_rad_1h:J',
+                                'is_day:idx',
             'absolute_humidity_2m:gm3',
             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
