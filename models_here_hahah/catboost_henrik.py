@@ -116,7 +116,7 @@ class CatBoostHenrik(MetaModel):
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
-        temp_df['month'] = temp_df['month'].dt.month
+        temp_df['month'] = temp_df['ds'].dt.month
         temp_df['month'] = (np.sin(2 * np.pi * (temp_df['month'])/ 12) + 1) / 2
 
 
@@ -202,7 +202,7 @@ class CatBoostHenrik(MetaModel):
 
         return out_df
     
-
+"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A']:#, 'B', 'C']:
@@ -215,7 +215,7 @@ for location in ['A']:#, 'B', 'C']:
     cbh.train(df_location)
     #cbh.test(df_location)
 """
-
+"""
 # Generate submittable
 ml.utils.make_submittable("CatBoost.csv", model=CatBoostHenrik())
 
