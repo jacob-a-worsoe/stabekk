@@ -27,6 +27,134 @@ if True:
 
 from autogluon.tabular import TabularDataset, TabularPredictor
 
+class AutoGluonJacob(MetaModel):
+    
+    def __init__(self, time_limit=60*3):
+        super().__init__("AutoGluon Jacob")
+
+        self.time_limit = time_limit
+
+        # autogluon features
+        # TabularPredictor (usage : **params_TabularPredictor)
+        self.params_TabularPredictor = \
+            {
+                'label': 'y',
+                'problem_type': 'regression', 
+                'eval_metric': 'mean_absolute_error',
+                'verbosity': 1,
+            } 
+        # TabularPredictor.fit
+        self.params_TabularPredictor_fit = \
+            {
+                'time_limit': self.time_limit,
+                'presets': 'high_quality', # [‘best_quality’, ‘high_quality’, ‘good_quality’, ‘medium_quality’, ‘optimize_for_deployment’, ‘interpretable’, ‘ignore_text’]
+                'hyperparameters': 'default',
+                # 'auto_stack': False,
+                # 'num_bag_folds': None, # set automatically by auto_stack True
+                # 'num_bag_sets': None, # set to 20 because of auto_stack
+                # 'num_stack_levels': None, # set automatically by auto_stack True
+                'hyperparameter_tune_kwargs': 'auto', # None to disable
+                # 'refit_full': True,
+                # 'feature_prune_kwargs': {}, # If None, do not perform feature pruning. If empty dictionary, perform feature pruning with default configurations.
+            }
+
+        self.use_tuning_data = True # 'sample_weight', 'random'
+        self.use_sample_weight = True
+
+        if self.use_sample_weight: # auto_weight a feature that exists
+            self.params_TabularPredictor['sample_weight'] = 'sample_importance'
+        
+
+    def preprocess(self, df: pd.DataFrame):
+        """
+        """
+        temp_df = df.copy()
+
+        temp_df['total_rad_1h:J'] = temp_df['diffuse_rad_1h:J'] + temp_df['direct_rad_1h:J']    
+        
+        # Extracting hour-of-day and month, and making them cyclical
+        temp_df['hour'] = temp_df['ds'].dt.hour
+        temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
+
+        temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
+        temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
+
+        # temp_df['year'] = temp_df['ds'].dt.hour
+        temp_df['month'] = temp_df['ds'].dt.month
+        # temp_df['day'] = temp_df['ds'].dt.day
+        # temp_df['dayofweek'] = temp_df['ds'].dt.dayofweek
+
+        if self.use_sample_weight:
+            # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
+            temp_df['sample_importance'] = 1
+            temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
+                        (temp_df['ds'].dt.month < 7), 'sample_importance'] = 2
+            
+            temp_df.loc[(temp_df['ds'].dt.month == 7) &
+                         (temp_df['ds'].dt.day <= 4), 'sample_importance'] = 2
+
+
+
+        return temp_df.drop(columns=['ds'])
+
+    def train(self, df):
+        """
+        """
+        print("Training JacobGluon")
+        temp_df = self.preprocess(df)
+
+        if self.use_tuning_data:
+
+            tuning_data = temp_df[(temp_df['month'] == 5) | (temp_df['month'] == 6)].sample(frac=0.5, random_state=42)
+            train_data = TabularDataset(temp_df[~temp_df.isin(tuning_data.to_dict(orient='list')).all(1)])
+
+            self.model = TabularPredictor(**self.params_TabularPredictor).fit(train_data, tuning_data=tuning_data, use_bag_holdout=True, **self.params_TabularPredictor_fit)
+        else:
+            train_data = TabularDataset(temp_df)
+
+            self.model = TabularPredictor(**self.params_TabularPredictor).fit(train_data, **self.params_TabularPredictor_fit)
+
+    def predict(self, df):
+        """
+        """
+        df = self.preprocess(df)
+
+        features = [col for col in df.columns if col != 'y']
+        X = df[features]
+
+        y_preds = self.model.predict(X)
+        print("AUTOGLUON MODEL OVERVIEW:")
+        print(self.model.leaderboard())       
+
+        out_df = pd.DataFrame(data={'y_pred': y_preds})
+
+        return out_df
+    
+
+"""
+df = ml.data.get_training_cleaned()
+
+for location in ['A', 'B', 'C']:
+    print("###########################################")
+    print(f"###############  LOCATION {location} ###############")
+    print("###########################################")
+    df_location = df[df['location'] == location]
+
+    agj = AutoGluonJacob(time_limit=60*10)
+    agj.test(df_location)
+"""
+
+# Generate submittable
+# ml.utils.make_submittale("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*10))
+
+"""
+---------------------------------------------------------------
+JacobGluon 10 min (with same settings as with the 145 one)    -
+---------------------------------------------------------------
+Actual MAE = 146.6 (vs. 145.2 for the 3min)
+From the model.leaderboard: ExtraTrees: A=-148.3, B=-18.3, C=-15.2
+A - [151.7, 159.1, 159.7]
+"""
 
 
 class AutoGluonHenrik(MetaModel):

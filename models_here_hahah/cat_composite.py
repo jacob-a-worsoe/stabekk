@@ -33,9 +33,12 @@ from catboost_henrik import CatBoostHenrik
 
 class CatCompositeHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, num_models=10):
         super().__init__("CatComposite Henrik")
+
+        self.num_models = num_models
         self.common_features = ['sample_importance', 'is_estimated','dayofyear',
+                                'is_day:idx',
                              'hour', 'month',
                             'total_rad_1h:J',
                             'sun_elevation:d',
@@ -46,16 +49,15 @@ class CatCompositeHenrik(MetaModel):
         self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K', 'elevation:m',
+                            'dew_point_2m:K',
                             'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
                             'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
                             'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
                             'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-                            'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
+                            'sfc_pressure:hPa', 'snow_depth:cm',
+                            'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-                            'wind_speed_w_1000hPa:ms']
+                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
         """
         # FEATURES WITHOUT SNOW
         self.random_features = ['absolute_humidity_2m:gm3',
@@ -77,10 +79,12 @@ class CatCompositeHenrik(MetaModel):
 
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
-        num_models = 10
-        num_rand_features = round(len(self.random_features) * 0.7)  
+        num_models = self.num_models
+        num_rand_features = round(len(self.random_features) * 0.9)
         df = df.copy()
         df['month'] = df['ds'].dt.month
+
+        random_states = [i for i in range(num_models - 1)] + [42]
 
         meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
         print("Meta-train % of full DF", len(meta_train_df)/len(df))
@@ -95,12 +99,13 @@ class CatCompositeHenrik(MetaModel):
         for i in range(num_models):
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
-            self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i])
+            self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i], random_state=random_states[i])
 
         for key in self.models:
             print("Training model", key)
             self.models[key].train(train_df)
         
+        """
         if (use_meta_learner):                        
             y_preds = self.predict(meta_train_df, meta_training=True)
 
@@ -114,6 +119,7 @@ class CatCompositeHenrik(MetaModel):
             self.meta_learner.coef_ = new_coefficients
 
             print(self.meta_learner.coef_)
+        """
     
     def predict(self, df, meta_training = False):
 
@@ -130,12 +136,12 @@ class CatCompositeHenrik(MetaModel):
             print("RETURNING ALL_PREDS")
             return pd.DataFrame(all_preds)
 
+        """
         #print("THIS HAS GONE TOO FAR!")
 
         # Use meta-learner to calculate final output (DISABLED)
         out_np = self.meta_learner.predict(all_preds)
         #print(out_np)
-
         """
         out_np = all_preds.mean(axis=1)
 
@@ -143,7 +149,6 @@ class CatCompositeHenrik(MetaModel):
         print(out_np)
 
         out_np = np.maximum(out_np, 0)
-        """
 
         return pd.DataFrame(out_np, columns=['y_pred'])
 
@@ -162,7 +167,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CatComposite_30models.csv", model=CatCompositeHenrik())
+ml.utils.make_submittable("CatComposite_50models_henrik_samp_weight.csv", model=CatCompositeHenrik(num_models=11))
 
     
 """

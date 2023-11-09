@@ -27,8 +27,9 @@ if True:
     from ml_combat.MetaModel import MetaModel
     import ml_combat as ml
 
+from models_here_hahah.cat_composite import CatCompositeHenrik
 from xg_boost_composite import XGBoostComposite
-from autogluon_henrik import AutoGluonHenrik
+from autogluon_henrik import AutoGluonHenrik, AutoGluonJacob
 from catboost_henrik import CatBoostHenrik
 
 class CompositeCompositeHenrik(MetaModel):
@@ -86,10 +87,15 @@ class CompositeCompositeHenrik(MetaModel):
         # Excluded AutoGluon models (https://auto.gluon.ai/0.4.0/api/autogluon.predictor.html)
         excluded_ag_models = None ### NOT GOOD!!!!!!! DONT EXCLUDEEEE
 
+        df = df.copy()
+
+        df.drop(df[(df['ds'].dt.month > 9) & (df['ds'].dt.month < 4)].index, inplace = True)
+
         self.models = {
-            "XGBoost Composite": XGBoostComposite(),
-            "AutoGluon 5min": AutoGluonHenrik(time_limit=60*30, excluded_models=excluded_ag_models),
-            "CatBoost Henrik": CatBoostHenrik()
+            #"XGBoost Composite": XGBoostComposite(),
+            #"AutoGluon 5min": AutoGluonHenrik(time_limit=60*30, excluded_models=excluded_ag_models),
+            "AutoGluonJacob 10min": AutoGluonJacob(time_limit=60*10),
+            "CatComposite x20": CatCompositeHenrik(num_models=20)
         }
 
         for key in self.models:
@@ -136,7 +142,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CompositeComposite_XGBComp_GluonNoDate_Cat_run.csv", model=CompositeCompositeHenrik())
+ml.utils.make_submittable("CompositeComposite_GluonNoDate_Cat_run_remove_gt9lt4_Jacob.csv", model=CompositeCompositeHenrik())
 
     
 """

@@ -32,11 +32,13 @@ from lightgbm_henrik import LightBGMHenrik
 
 class LGBMCompositeHenrik(MetaModel):
     
-    def __init__(self):
+    def __init__(self, num_models=10):
         super().__init__("LGBMComposite Henrik")
 
-        self.common_features = ['dayofyear',
-                             'hour',
+        self.num_models = num_models
+        self.common_features = ['sample_importance', 'is_estimated','dayofyear',
+                                'is_day:idx',
+                             'hour', 'month',
                             'total_rad_1h:J',
                             'sun_elevation:d',
                             'sun_azimuth:d',
@@ -46,50 +48,30 @@ class LGBMCompositeHenrik(MetaModel):
         self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K', 'elevation:m',
+                            'dew_point_2m:K',
                             'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
                             'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
                             'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
                             'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa', 'snow_density:kgm3', 'snow_depth:cm',
-                            'snow_drift:idx', 'snow_melt_10min:mm', 'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
+                            'sfc_pressure:hPa', 'snow_depth:cm',
+                            'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-                            'wind_speed_w_1000hPa:ms']
-        
-        """
-
-        self.features.extend(['month',
-                             'hour',
-                            'total_rad_1h:J',
-                            'fresh_snow_12h:cm',
-                            'snow_water:kgm2',
-                            'is_day:idx',
-                            'is_in_shadow:idx',
-                            'rain_water:kgm2',
-                            'sun_azimuth:d',
-                            'sun_elevation:d',
-                            't_1000hPa:K',
-                            'dew_or_rime:idx',
-                            'air_density_2m:kgm3',
-                            'absolute_humidity_2m:gm3'])
-        
-        """                              
+                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+                           
         
     def preprocess(self, df: pd.DataFrame):
 
-        return df.copy()
+        return df
 
-    def train(self, df: MetaModel):
-        
-        num_models = 30
+    def train(self, df: pd.DataFrame):
+        df = self.preprocess(df)
         num_rand_features = round(len(self.random_features) * 1)
 
         features = dict()
 
         self.models = dict()
 
-        for i in range(num_models):
+        for i in range(self.num_models):
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
             self.models[f'LGBM_{i} Henrik'] = LightBGMHenrik(features = features[i])
@@ -130,20 +112,22 @@ for location in ['A', 'B', 'C']:
     print("###########################################")
     df_location = df[df['location'] == location]
 
-    lgbmch = LGBMCompositeHenrik()
+    lgbmch = LGBMCompositeHenrik(num_models=10)
     lgbmch.test(df_location)
 
-"""
 
 # Generate submittable
-ml.utils.make_submittable("LGBMComposite.csv", model=LGBMCompositeHenrik())
-"""
-    
+ml.utils.make_submittable("LGBMComp_new.csv", model=LGBMCompositeHenrik(20))
+ 
 """
 Best so far; 
 - all features
 
 LATEST RUN
+A (w/o sample_weight) - MAE Vals: MEAN: 162.33737975461767 ALL: [159.3341315613959, 164.1440029369985, 162.39070944464194, 159.8157484296945, 166.00230640035755]
+A (w/  sample_weight) - MAE Vals: MEAN: 170.7231177136227 ALL: [167.22454313865978, 172.91097788580325, 171.65778210830626, 167.5210570353448, 174.30122839999945]
+
+
 A - MAE Vals: MEAN: 183.05233386089677 ALL: [183.18792470845497, 188.75977707012484, 179.87072071664326, 179.51379971298303, 183.9294470962777]
 B - MAE Vals: MEAN: 25.807783651301374 ALL: [25.97709097110887, 25.51560936122758, 26.010697750587987, 25.61228720891779, 25.92323296466464]
 C - MAE Vals: MEAN: 20.47067950351959 ALL: [19.930035757890437, 20.656757771403267, 20.716617731720987, 21.041791948722988, 20.00819430786028]
