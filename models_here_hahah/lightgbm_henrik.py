@@ -27,7 +27,7 @@ if True:
     import ml_combat as ml
 
 import lightgbm as lgbm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 
 class LightBGMHenrik(MetaModel):
@@ -41,10 +41,12 @@ class LightBGMHenrik(MetaModel):
             self.features = features
         
         else:
-            self.features.extend(['dayofyear',
-                             'hour',
-                            'total_rad_1h:J',
-                'absolute_humidity_2m:gm3',
+            self.features.extend(['sample_importance',
+                                'dayofyear',
+                                'hour',
+                                'total_rad_1h:J',
+                                'is_day:idx',
+            'absolute_humidity_2m:gm3',
             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
             'dew_point_2m:K', 'effective_cloud_cover:p', 'elevation:m',
@@ -72,6 +74,15 @@ class LightBGMHenrik(MetaModel):
         # FEATURE ENGINEERING
         #####################################################################################
 
+         # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
+        temp_df['sample_importance'] = 1
+        temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
+                    (temp_df['ds'].dt.month < 7), 'sample_importance'] = 2
+        
+        temp_df.loc[(temp_df['ds'].dt.month == 7) &
+                    (temp_df['ds'].dt.day <= 4), 'sample_importance'] = 2
+        
+        # Add is_estimated parameter
         temp_df['is_estimated'] = (temp_df['weather_data_type'] == 'estimated')
         temp_df['is_estimated'] = temp_df['is_estimated'].astype(int)
 
@@ -81,12 +92,15 @@ class LightBGMHenrik(MetaModel):
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
 
+        temp_df['month'] = temp_df['ds'].dt.month
+        temp_df['month'] = (np.sin(2 * np.pi * (temp_df['month'])/ 12) + 1) / 2
+
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
    
-        # SETTING NAN TO 0 CONFORMING TO XGBOOST
+        # SETTING NAN TO 0 CONFORMING TO LGBM
         temp_df.fillna(0, inplace=True)
-
+    
         #####################################################################################
 
         # DROPPING UNEEEDED FEATURES
@@ -106,15 +120,22 @@ class LightBGMHenrik(MetaModel):
         temp_df = self.preprocess(df)
 
         # Separate features and target
-        X = temp_df.drop('y', axis=1, inplace=False).copy().values
+        sample_importance = temp_df['sample_importance']
+        X = temp_df.drop(['y','sample_importance'], axis=1, inplace=False).copy().values
         y = temp_df['y'].copy().values
 
         # Train test split
-        #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, random_state=42)
+
+        num_iterations = 2000
+        early_stopping_percentage = 0.1
 
         params = {
             'objective': "mae",
             'learning_rate': 0.1,
+            'num_leaves': 128,
+            'zero_as_missing': True,
+            'num_iterations': num_iterations
         }
 
 
@@ -122,8 +143,12 @@ class LightBGMHenrik(MetaModel):
         self.model = lgbm.LGBMRegressor(**params)
 
         self.model.fit(
-            X,
-            y
+            X_train,
+            y_train,
+            eval_set = (X_test, y_test),
+            #sample_weight = sample_importance,
+            eval_metric = 'mae',
+            early_stopping_rounds = round(num_iterations * early_stopping_percentage)
         )
 
 
@@ -133,7 +158,7 @@ class LightBGMHenrik(MetaModel):
         """
         df = self.preprocess(df)
 
-        features = [col for col in df.columns if col != 'y']
+        features = [col for col in df.columns if col not in ['y', 'sample_importance']]
         X = df[features].values
         y_preds = self.model.predict(X)
 
