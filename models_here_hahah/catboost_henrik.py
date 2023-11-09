@@ -33,8 +33,11 @@ from sklearn.model_selection import GridSearchCV, KFold, TimeSeriesSplit, train_
 
 class CatBoostHenrik(MetaModel):
     
-    def __init__(self, features=None):
+    def __init__(self, features=None, random_state=42):
         super().__init__("CatBoost Henrik")
+
+        self.random_state = random_state
+
         if(features):
             self.features = features
         else:
@@ -150,14 +153,15 @@ class CatBoostHenrik(MetaModel):
         y = temp_df['y'].copy().values
 
         # Train test split
-        #X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, random_state=self.random_state)
 
         params = {
             'objective': "MAE",
-            'learning_rate': 0.04,
-            'depth': 9,
-            'iterations': 7000,
-            'logging_level': 'Silent'
+            'learning_rate': 0.05,
+            'depth': 6,
+            'iterations': 6000,
+            'logging_level': 'Silent',
+            'l2_leaf_reg': 5 ## HOW TO JUSTIFY
         }
 
         
@@ -179,10 +183,10 @@ class CatBoostHenrik(MetaModel):
         """
         
         self.model.fit(
-             X,
-             y,
+             X_train,
+             y_train,
              verbose=True,
-             sample_weight=temp_df['sample_importance']
+             eval_set=(X_test, y_test),
         )
         
 

@@ -80,9 +80,11 @@ class CatCompositeHenrik(MetaModel):
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
         num_models = self.num_models
-        num_rand_features = round(len(self.random_features) * 0.7)  
+        num_rand_features = round(len(self.random_features) * 0.9)
         df = df.copy()
         df['month'] = df['ds'].dt.month
+
+        random_states = [i for i in range(num_models - 1)] + [42]
 
         meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
         print("Meta-train % of full DF", len(meta_train_df)/len(df))
@@ -97,12 +99,13 @@ class CatCompositeHenrik(MetaModel):
         for i in range(num_models):
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
-            self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i])
+            self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i], random_state=random_states[i])
 
         for key in self.models:
             print("Training model", key)
             self.models[key].train(train_df)
         
+        """
         if (use_meta_learner):                        
             y_preds = self.predict(meta_train_df, meta_training=True)
 
@@ -116,6 +119,7 @@ class CatCompositeHenrik(MetaModel):
             self.meta_learner.coef_ = new_coefficients
 
             print(self.meta_learner.coef_)
+        """
     
     def predict(self, df, meta_training = False):
 
@@ -132,12 +136,12 @@ class CatCompositeHenrik(MetaModel):
             print("RETURNING ALL_PREDS")
             return pd.DataFrame(all_preds)
 
+        """
         #print("THIS HAS GONE TOO FAR!")
 
         # Use meta-learner to calculate final output (DISABLED)
         out_np = self.meta_learner.predict(all_preds)
         #print(out_np)
-
         """
         out_np = all_preds.mean(axis=1)
 
@@ -145,7 +149,6 @@ class CatCompositeHenrik(MetaModel):
         print(out_np)
 
         out_np = np.maximum(out_np, 0)
-        """
 
         return pd.DataFrame(out_np, columns=['y_pred'])
 
@@ -162,10 +165,10 @@ for location in ['A', 'B', 'C']:
     cch.test(df_location)
 
 """
-"""
+
 # Generate submittable
-ml.utils.make_submittable("CatComposite_5models_henrik_samp_weight.csv", model=CatCompositeHenrik())
-"""
+ml.utils.make_submittable("CatComposite_50models_henrik_samp_weight.csv", model=CatCompositeHenrik(num_models=11))
+
     
 """
 Best so far; 
