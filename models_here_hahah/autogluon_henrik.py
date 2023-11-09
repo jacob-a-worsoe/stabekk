@@ -145,7 +145,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*10))
+# ml.utils.make_submittale("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*10))
 
 """
 ---------------------------------------------------------------

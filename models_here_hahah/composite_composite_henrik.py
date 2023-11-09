@@ -87,6 +87,10 @@ class CompositeCompositeHenrik(MetaModel):
         # Excluded AutoGluon models (https://auto.gluon.ai/0.4.0/api/autogluon.predictor.html)
         excluded_ag_models = None ### NOT GOOD!!!!!!! DONT EXCLUDEEEE
 
+        df = df.copy()
+
+        df.drop(df[(df['ds'].dt.month > 9) & (df['ds'].dt.month < 4)].index, inplace = True)
+
         self.models = {
             #"XGBoost Composite": XGBoostComposite(),
             #"AutoGluon 5min": AutoGluonHenrik(time_limit=60*30, excluded_models=excluded_ag_models),
@@ -138,7 +142,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CompositeComposite_XGBComp_GluonNoDate_Cat_run.csv", model=CompositeCompositeHenrik())
+ml.utils.make_submittable("CompositeComposite_GluonNoDate_Cat_run_remove_gt9lt4_Jacob.csv", model=CompositeCompositeHenrik())
 
     
 """
