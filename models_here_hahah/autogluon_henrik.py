@@ -41,14 +41,14 @@ class AutoGluonJacob(MetaModel):
                 'label': 'y',
                 'problem_type': 'regression', 
                 'eval_metric': 'mean_absolute_error',
-                'verbosity': 1,
+                'verbosity': 2,
             } 
         # TabularPredictor.fit
         self.params_TabularPredictor_fit = \
             {
                 'time_limit': self.time_limit,
                 'presets': 'high_quality', # [‘best_quality’, ‘high_quality’, ‘good_quality’, ‘medium_quality’, ‘optimize_for_deployment’, ‘interpretable’, ‘ignore_text’]
-                'hyperparameters': 'default',
+                #'hyperparameters': 'default',
                 # 'auto_stack': False,
                 # 'num_bag_folds': None, # set automatically by auto_stack True
                 # 'num_bag_sets': None, # set to 20 because of auto_stack
@@ -103,6 +103,9 @@ class AutoGluonJacob(MetaModel):
         print("Training JacobGluon")
         temp_df = self.preprocess(df)
 
+        # temp_df.drop(df[(df['ds'].dt.month > 9) & (df['ds'].dt.month < 4)].index, inplace = True)
+
+
         if self.use_tuning_data:
 
             tuning_data = temp_df[(temp_df['month'] == 5) | (temp_df['month'] == 6)].sample(frac=0.5, random_state=42)
@@ -145,7 +148,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-# ml.utils.make_submittale("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*10))
+ml.utils.make_submittable("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*3))
 
 """
 ---------------------------------------------------------------
