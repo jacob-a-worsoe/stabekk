@@ -41,14 +41,14 @@ class AutoGluonJacob(MetaModel):
                 'label': 'y',
                 'problem_type': 'regression', 
                 'eval_metric': 'mean_absolute_error',
-                'verbosity': 1,
+                'verbosity': 2,
             } 
         # TabularPredictor.fit
         self.params_TabularPredictor_fit = \
             {
                 'time_limit': self.time_limit,
                 'presets': 'high_quality', # [‘best_quality’, ‘high_quality’, ‘good_quality’, ‘medium_quality’, ‘optimize_for_deployment’, ‘interpretable’, ‘ignore_text’]
-                'hyperparameters': 'default',
+                #'hyperparameters': 'default',
                 # 'auto_stack': False,
                 # 'num_bag_folds': None, # set automatically by auto_stack True
                 # 'num_bag_sets': None, # set to 20 because of auto_stack
@@ -63,6 +63,27 @@ class AutoGluonJacob(MetaModel):
 
         if self.use_sample_weight: # auto_weight a feature that exists
             self.params_TabularPredictor['sample_weight'] = 'sample_importance'
+
+
+        self.common_features = ['sample_importance', 'weather_data_type','dayofyear',
+                                'is_day:idx',
+                             'hour', 'month',
+                            'total_rad_1h:J',
+                            'sun_elevation:d',
+                            'sun_azimuth:d',
+                            'is_in_shadow:idx',
+                            'effective_cloud_cover:p']
+        
+        self.random_features = ['absolute_humidity_2m:gm3',
+                                'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+                                'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+                                'dew_point_2m:K', 'diffuse_rad:W', 'diffuse_rad_1h:J', 'direct_rad:W',
+                                'direct_rad_1h:J', 'fresh_snow_3h:cm',
+                                'precip_5min:mm','precip_type_5min:idx', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+                                'sfc_pressure:hPa','snow_water:kgm2',
+                                'super_cooled_liquid_water:kgm2',
+                                't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+                                'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
         
 
     def preprocess(self, df: pd.DataFrame):
@@ -95,13 +116,16 @@ class AutoGluonJacob(MetaModel):
 
 
 
-        return temp_df.drop(columns=['ds'])
+        return temp_df.drop(columns=['ds'])[self.common_features + self.random_features + (['y'] if 'y' in temp_df else [])].copy()
 
     def train(self, df):
         """
         """
         print("Training JacobGluon")
         temp_df = self.preprocess(df)
+
+        # temp_df.drop(df[(df['ds'].dt.month > 9) & (df['ds'].dt.month < 4)].index, inplace = True)
+
 
         if self.use_tuning_data:
 
@@ -145,7 +169,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-# ml.utils.make_submittale("JacobGluon_w_sample_imp_10min.csv", model=AutoGluonJacob(time_limit=60*10))
+ml.utils.make_submittable("JacobGluon_w_sample_imp_10min_select_features.csv", model=AutoGluonJacob(time_limit=60*10))
 
 """
 ---------------------------------------------------------------

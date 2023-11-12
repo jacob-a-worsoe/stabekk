@@ -37,6 +37,28 @@ class CatCompositeHenrik(MetaModel):
         super().__init__("CatComposite Henrik")
 
         self.num_models = num_models
+        # self.common_features = ['sample_importance', 'is_estimated','dayofyear',
+        #                         'is_day:idx',
+        #                      'hour', 'month',
+        #                     'total_rad_1h:J',
+        #                     'sun_elevation:d',
+        #                     'sun_azimuth:d',
+        #                     'is_in_shadow:idx',
+        #                     'effective_cloud_cover:p']
+        
+        # self.random_features = ['absolute_humidity_2m:gm3',
+        #                     'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+        #                     'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+        #                     'dew_point_2m:K',
+        #                     'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+        #                     'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
+        #                     'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
+        #                     'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+        #                     'sfc_pressure:hPa', 'snow_depth:cm',
+        #                     'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
+        #                     't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+        #                     'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+        
         self.common_features = ['sample_importance', 'is_estimated','dayofyear',
                                 'is_day:idx',
                              'hour', 'month',
@@ -78,7 +100,7 @@ class CatCompositeHenrik(MetaModel):
     
     def train(self, df: pd.DataFrame, use_meta_learner=True):
         num_models = self.num_models
-        num_rand_features = round(len(self.random_features) * 0.9)
+        num_rand_features = round(len(self.random_features) * 1)
         df = df.copy()
         df['month'] = df['ds'].dt.month
 
