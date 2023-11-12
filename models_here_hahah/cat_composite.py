@@ -78,21 +78,21 @@ class CatCompositeHenrik(MetaModel):
                                 'super_cooled_liquid_water:kgm2',
                                 't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
                                 'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+        
         """
-        # FEATURES WITHOUT SNOW
         self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K', 'elevation:m',
-                            'msl_pressure:hPa', 'precip_5min:mm',
+                            'dew_point_2m:K',
+                            'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
+                            'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
                             'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
                             'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa',
-                            'super_cooled_liquid_water:kgm2',
+                            'sfc_pressure:hPa', 'snow_depth:cm',
+                            'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-                            'wind_speed_w_1000hPa:ms']
-        """         
+                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+        """                            
         
     def preprocess(self, df: pd.DataFrame):
         return df.copy()
@@ -104,9 +104,7 @@ class CatCompositeHenrik(MetaModel):
         df = df.copy()
         df['month'] = df['ds'].dt.month
 
-        # random_states = [41, 61, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]#[i for i in range(num_models - 1)]
-        random_states = [i for i in range(23, 43)]
-
+        random_states = [i for i in range(33, 33 + num_models)]
 
         meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
         print("Meta-train % of full DF", len(meta_train_df)/len(df))
@@ -119,6 +117,7 @@ class CatCompositeHenrik(MetaModel):
         self.models = dict()
 
         for i in range(num_models):
+            random.seed(random_states[i])
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
             self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i], random_state=random_states[i])
@@ -189,7 +188,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CatComposite_20models_jacob_samp_weight_new_features_retest_no_random.csv", model=CatCompositeHenrik(num_models=20))
+ml.utils.make_submittable("CatComposite_new_features_x20_lr0.03_iters8000_nothing_random_CHECK.csv", model=CatCompositeHenrik(num_models=20))
 
     
 """

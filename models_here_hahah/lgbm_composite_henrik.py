@@ -46,17 +46,15 @@ class LGBMCompositeHenrik(MetaModel):
                             'effective_cloud_cover:p']
         
         self.random_features = ['absolute_humidity_2m:gm3',
-                            'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
-                            'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K',
-                            'fresh_snow_12h:cm', 'fresh_snow_1h:cm', 'fresh_snow_24h:cm',
-                            'fresh_snow_3h:cm', 'fresh_snow_6h:cm', 'msl_pressure:hPa', 'precip_5min:mm',
-                            'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
-                            'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa', 'snow_depth:cm',
-                            'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
-                            't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+                                'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+                                'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+                                'dew_point_2m:K', 'diffuse_rad:W', 'diffuse_rad_1h:J', 'direct_rad:W',
+                                'direct_rad_1h:J', 'fresh_snow_3h:cm',
+                                'precip_5min:mm','precip_type_5min:idx', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+                                'sfc_pressure:hPa','snow_water:kgm2',
+                                'super_cooled_liquid_water:kgm2',
+                                't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+                                'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
                            
         
     def preprocess(self, df: pd.DataFrame):
@@ -67,14 +65,14 @@ class LGBMCompositeHenrik(MetaModel):
         df = self.preprocess(df)
         num_rand_features = round(len(self.random_features) * 1)
 
+        random_states = [i for i in range(33, 33 + self.num_models)]
         features = dict()
-
         self.models = dict()
 
         for i in range(self.num_models):
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
-            self.models[f'LGBM_{i} Henrik'] = LightBGMHenrik(features = features[i])
+            self.models[f'LGBM_{i} Henrik'] = LightBGMHenrik(features = features[i], random_state=random_states[i])
 
             print(f'LGBM_{i} Henrik')
 
@@ -103,7 +101,7 @@ class LGBMCompositeHenrik(MetaModel):
 
         return pd.DataFrame(avg_series, columns=['y_pred'])
 
-
+"""
 df = ml.data.get_training_cleaned()
 
 for location in ['A', 'B', 'C']:
@@ -114,7 +112,7 @@ for location in ['A', 'B', 'C']:
 
     lgbmch = LGBMCompositeHenrik(num_models=10)
     lgbmch.test(df_location)
-
+"""
 
 # Generate submittable
 ml.utils.make_submittable("LGBMComp_new.csv", model=LGBMCompositeHenrik(20))
