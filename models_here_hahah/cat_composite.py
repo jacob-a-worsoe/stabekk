@@ -47,6 +47,18 @@ class CatCompositeHenrik(MetaModel):
                             'effective_cloud_cover:p']
         
         self.random_features = ['absolute_humidity_2m:gm3',
+                                'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+                                'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+                                'dew_point_2m:K', 'diffuse_rad:W', 'diffuse_rad_1h:J', 'direct_rad:W',
+                                'direct_rad_1h:J', 'fresh_snow_3h:cm',
+                                'precip_5min:mm','precip_type_5min:idx', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+                                'sfc_pressure:hPa','snow_water:kgm2',
+                                'super_cooled_liquid_water:kgm2',
+                                't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+                                'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
+        
+        """
+        self.random_features = ['absolute_humidity_2m:gm3',
                             'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
                             'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
                             'dew_point_2m:K',
@@ -58,21 +70,7 @@ class CatCompositeHenrik(MetaModel):
                             'snow_water:kgm2', 'super_cooled_liquid_water:kgm2',
                             't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
                             'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
-        """
-        # FEATURES WITHOUT SNOW
-        self.random_features = ['absolute_humidity_2m:gm3',
-                            'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
-                            'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
-                            'dew_point_2m:K', 'elevation:m',
-                            'msl_pressure:hPa', 'precip_5min:mm',
-                            'precip_type_5min:idx', 'pressure_100m:hPa', 'pressure_50m:hPa',
-                            'prob_rime:p', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
-                            'sfc_pressure:hPa',
-                            'super_cooled_liquid_water:kgm2',
-                            't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
-                            'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
-                            'wind_speed_w_1000hPa:ms']
-        """         
+        """                            
         
     def preprocess(self, df: pd.DataFrame):
         return df.copy()
@@ -84,7 +82,7 @@ class CatCompositeHenrik(MetaModel):
         df = df.copy()
         df['month'] = df['ds'].dt.month
 
-        random_states = [i for i in range(num_models - 1)] + [42]
+        random_states = [i for i in range(33, 33 + num_models)]
 
         meta_train_df = df[(df['month'] == 5) | (df['month'] == 6) | (df['month'] == 7)].sample(frac=0.5)
         print("Meta-train % of full DF", len(meta_train_df)/len(df))
@@ -97,6 +95,7 @@ class CatCompositeHenrik(MetaModel):
         self.models = dict()
 
         for i in range(num_models):
+            random.seed(random_states[i])
             temp_rand_features = random.sample(self.random_features, num_rand_features)
             features[i] = self.common_features + temp_rand_features
             self.models[f'CATBOOST_{i}'] = CatBoostHenrik(features = features[i], random_state=random_states[i])
@@ -167,7 +166,7 @@ for location in ['A', 'B', 'C']:
 """
 
 # Generate submittable
-ml.utils.make_submittable("CatComposite_50models_henrik_samp_weight.csv", model=CatCompositeHenrik(num_models=11))
+ml.utils.make_submittable("CatComposite_new_features_x20_lr0.03_iters8000_nothing_random_CHECK.csv", model=CatCompositeHenrik(num_models=20))
 
     
 """

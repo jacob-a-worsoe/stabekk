@@ -41,7 +41,28 @@ class XGBoostComposite(MetaModel):
     
     def __init__(self):
         super().__init__("XGBoost Composite")
+        
+        self.common_features = ['sample_importance', 'is_estimated','dayofyear',
+                                'is_day:idx',
+                             'hour', 'month',
+                            'total_rad_1h:J',
+                            'sun_elevation:d',
+                            'sun_azimuth:d',
+                            'is_in_shadow:idx',
+                            'effective_cloud_cover:p']
+        
+        self.random_features = ['absolute_humidity_2m:gm3',
+                                'air_density_2m:kgm3', 'ceiling_height_agl:m', 'clear_sky_energy_1h:J',
+                                'clear_sky_rad:W', 'cloud_base_agl:m', 'dew_or_rime:idx',
+                                'dew_point_2m:K', 'diffuse_rad:W', 'diffuse_rad_1h:J', 'direct_rad:W',
+                                'direct_rad_1h:J', 'fresh_snow_3h:cm',
+                                'precip_5min:mm','precip_type_5min:idx', 'rain_water:kgm2', 'relative_humidity_1000hPa:p',
+                                'sfc_pressure:hPa','snow_water:kgm2',
+                                'super_cooled_liquid_water:kgm2',
+                                't_1000hPa:K', 'total_cloud_cover:p', 'visibility:m',
+                                'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms']
 
+        """
         self.common_features = ['is_estimated','dayofyear',
                              'hour',
                             'total_rad_1h:J',
@@ -64,7 +85,7 @@ class XGBoostComposite(MetaModel):
                             'wind_speed_10m:ms', 'wind_speed_u_10m:ms', 'wind_speed_v_10m:ms',
                             'wind_speed_w_1000hPa:ms']
                     
-        
+        """
     def preprocess(self, df: pd.DataFrame):
         return df.copy()
 
@@ -154,10 +175,10 @@ for location in ['A', 'B', 'C']:
     xgbh.test(df_location)
 """
 
-"""
+
 # Generate submittable
-ml.utils.make_submittable("XGBoostComposite_metalearner2_linreg.csv", model=XGBoostComposite())
-"""
+ml.utils.make_submittable("XGBComp_new_features.csv", model=XGBoostComposite())
+
 
 """ 
 XGBoostComposite.csv

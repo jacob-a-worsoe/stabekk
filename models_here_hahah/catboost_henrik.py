@@ -157,9 +157,9 @@ class CatBoostHenrik(MetaModel):
 
         params = {
             'objective': "MAE",
-            'learning_rate': 0.05,
+            'learning_rate': 0.02,
             'depth': 6,
-            'iterations': 6000,
+            'iterations': 8000,
             'logging_level': 'Silent',
             'l2_leaf_reg': 5 ## HOW TO JUSTIFY
         }

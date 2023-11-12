@@ -68,6 +68,7 @@ class XGBoostHenrik(MetaModel):
         # FEATURE ENGINEERING
         #####################################################################################
 
+
          # Emphasize test start-end: Starting date: 2023-05-01 00:00:00 Ending data 2023-07-03 23:00:00
         temp_df['sample_importance'] = 1
         temp_df.loc[(temp_df['ds'].dt.month >= 5) & 
@@ -85,6 +86,10 @@ class XGBoostHenrik(MetaModel):
         # Extracting hour-of-day and month, and making them cyclical
         temp_df['hour'] = temp_df['ds'].dt.hour
         temp_df['hour'] = (np.sin(2 * np.pi * (temp_df['hour'] - 4)/ 24) + 1) / 2
+
+        temp_df['month'] = temp_df['ds'].dt.month
+        temp_df['month'] = (np.sin(2 * np.pi * (temp_df['month'])/ 12) + 1) / 2
+
 
         temp_df['dayofyear'] = temp_df['ds'].dt.day_of_year
         temp_df['dayofyear'] = np.sin(2 * np.pi * (temp_df['dayofyear'] - 80)/ 365)
@@ -119,9 +124,10 @@ class XGBoostHenrik(MetaModel):
 
         params = {
             'objective': "reg:absoluteerror",
-            'eta': 0.25,
-            'max_depth': 8,
-            'lambda': 1
+            'eta': 0.15,
+            'max_depth': 18,
+            'lambda': 4.5,
+            'iterations': 6000
         }
 
         # Setup XGB

@@ -118,7 +118,6 @@ def get_training_flattened():
     df.columns = df.columns.droplevel().tolist()
     df.reset_index(inplace=True)
     df.rename(columns={'datetime': 'ds', 'pv_measurement': 'y'}, inplace=True)
-    # df['ENG_total_rad'] = df['diffuse_rad_1h:J'] + df['direct_rad_1h:J']
     
     return df[['location', 'ds', 'y', 'weather_data_type'] + [i for i in df.columns.tolist() if i not in ['location', 'ds', 'y', 'weather_data_type']]].copy()
 
